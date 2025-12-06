@@ -13,6 +13,7 @@
 
     <style>
         :root {
+            /* --- PALETTE --- */
             --bg-color: #0a0e17; --card-bg: #111620;
             --primary: #4CC9F0; --secondary: #7209B7; --text: #ffffff;
             --success: #06D6A0; --danger: #EF476F; --warning: #FFD166;
@@ -25,10 +26,12 @@
         }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
+        /* AUTH SCREEN */
         #auth-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
         .google-btn { background: white; color: #444; border: none; padding: 15px 30px; font-size: 1.2em; font-weight: bold; border-radius: 50px; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(255,255,255,0.2); transition: 0.2s; }
         .google-btn:active { transform: scale(0.95); }
 
+        /* FX */
         .floating-xp { position: absolute; font-weight: bold; font-size: 1.2em; pointer-events: none; animation: floatUp 1s ease-out forwards; z-index: 9999; text-shadow: 0 0 5px rgba(0,0,0,0.8); }
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 50% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-40px) scale(1); } }
         .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 9998; animation: particleFade 0.8s ease-out forwards; }
@@ -36,11 +39,13 @@
         .task-item input:checked { animation: pulseCheck 0.3s cubic-bezier(0.17, 0.67, 0.43, 1.65); }
         @keyframes pulseCheck { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
 
+        /* WHEEL OF FORTUNE */
         .wheel-wrapper { position: relative; width: 280px; height: 280px; margin: 10px auto; display: flex; justify-content: center; align-items: center; }
         .wheel-canvas { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 15px rgba(255, 183, 3, 0.2); transform: rotate(0deg); }
         .wheel-pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 20px solid var(--danger); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); z-index: 10; }
         .wheel-center { position: absolute; width: 40px; height: 40px; background: #222; border: 2px solid var(--fizz-color); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 5; }
 
+        /* HUD */
         .hud-container { width: 100%; height: 450px; position: relative; background: radial-gradient(circle at center, #1a2233 0%, #0a0e17 100%); border-radius: 15px; border: 1px solid #333; margin-bottom: 20px; overflow: hidden; background-image: linear-gradient(rgba(76, 201, 240, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(76, 201, 240, 0.1) 1px, transparent 1px); background-size: 40px 40px; }
         .avatar-img { height: 90%; width: auto; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; filter: drop-shadow(0 0 20px rgba(76, 201, 240, 0.2)); transition: 0.5s; }
         .hud-bar-container { position: absolute; top: 50px; left: 20px; width: 12px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 6px; z-index: 3; border: 1px solid rgba(255,255,255,0.2); }
@@ -56,6 +61,7 @@
         .hf-title { font-size: 0.8em; color: white; letter-spacing: 1px; font-weight: bold; }
         .hf-sub { font-size: 0.7em; color: var(--primary); letter-spacing: 1px; }
 
+        /* UI Structure */
         .header { padding: 20px; background: linear-gradient(135deg, #1a1a1a, #000); border-bottom: 2px solid var(--primary); flex-shrink: 0; display:flex; justify-content:space-between; align-items:center; }
         .level-info { font-size: 1.2em; font-weight: bold; }
         .xp-bar-container { width: 100%; height: 10px; background-color: #333; border-radius: 5px; overflow: hidden; margin-top: 5px; }
@@ -67,6 +73,7 @@
         .screen { display: none; animation: fadeIn 0.3s; } .screen.active { display: block; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .card { background-color: var(--card-bg); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-left: 4px solid var(--primary); } .card h3 { margin-top: 0; color: var(--primary); }
         
+        /* Specific Cards */
         .water-card { border-left-color: var(--water-color); } .water-progress-bg { width: 100%; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin: 10px 0; position: relative; } .water-progress-fill { height: 100%; background: var(--water-color); width: 0%; transition: width 0.5s ease; } .water-text { position: absolute; width: 100%; text-align: center; font-size: 0.8em; line-height: 20px; color: white; text-shadow: 0 0 3px #000; } .water-controls { display: flex; gap: 5px; justify-content: space-between; margin-top: 10px; } .water-btn { flex: 1; background: rgba(72, 149, 239, 0.2); border: 1px solid var(--water-color); color: var(--water-color); padding: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; } .water-btn-neg { flex: 1; background: rgba(239, 71, 111, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 5px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8em; }
         .air-card { border-left-color: var(--air-color); } .air-progress-bg { width: 100%; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin: 10px 0; position: relative; } .air-progress-fill { height: 100%; background: var(--air-color); width: 0%; transition: width 0.5s ease; } .air-text { position: absolute; width: 100%; text-align: center; font-size: 0.8em; line-height: 20px; color: white; text-shadow: 0 0 3px #000; } .air-controls { display: flex; gap: 5px; justify-content: space-between; margin-top: 10px; } .air-btn { flex: 1; background: rgba(0, 180, 216, 0.2); border: 1px solid var(--air-color); color: var(--air-color); padding: 8px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; } .air-btn-neg { flex: 1; background: rgba(239, 71, 111, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 5px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.8em; }
         .sleep-card { border-left-color: var(--sleep-color); } .sleep-inputs { display: flex; gap: 15px; margin-bottom: 10px; } .sleep-field { flex: 1; } .sleep-label { font-size: 0.8em; color: #aaa; display: block; margin-bottom: 5px; } .sleep-time-input { width: 100%; background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 8px; box-sizing: border-box; font-family: inherit; } .sleep-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; } .sleep-result { font-weight: bold; font-size: 1.1em; color: var(--sleep-color); } .sleep-save-btn { background: var(--sleep-color); color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
@@ -324,27 +331,36 @@
     }
 
     // --- CORE SYNC ---
+    // --- ЗАПУСК И СИНХРОНИЗАЦИЯ ---
     function startCloudSync() {
         db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
             const isLocalChange = doc.metadata.hasPendingWrites;
+            
             if (doc.exists) {
                 const data = doc.data();
+                
+                // Если изменение пришло из облака (а не мы сами нажали) - обновляем локально
                 if (!isLocalChange) {
-                    // Sync Cloud -> Local
                     for (const [key, value] of Object.entries(data)) {
                         originalSetItem.apply(localStorage, [key, value]);
                     }
                 }
+                
+                // Перезагружаем переменные и экран
                 loadVariables();
-                try { renderAll(); } catch(e) { console.error("Render error:", e); }
+                renderAll();
+                
+                // 🔥 ВАЖНО: Перерисовываем колесо после загрузки данных
+                setTimeout(drawWheel, 500); 
+                
             } else {
                 initDefaults();
             }
         });
         
-        // Init UI components once
+        // Гарантированный запуск интерфейса при старте
         if (!window.appInitialized) {
-             drawWheel();
+             setTimeout(drawWheel, 1000); // Рисуем колесо через секунду
              setInterval(checkReminders, 60000);
              window.appInitialized = true;
         }
@@ -417,14 +433,20 @@
         document.body.appendChild(el); setTimeout(() => el.remove(), 1000);
     }
 
-    // --- TASKS LOGIC ---
+  // --- ЗАДАЧИ И XP (ИСПРАВЛЕНО) ---
     function toggleTask(taskId, xp, element, color = '#4CC9F0') { 
         const today = new Date().toLocaleDateString('ru-RU'); 
         const key = `slv_${today}_${taskId}`; 
         
+        // Проверяем текущее состояние в хранилище, а не по галочке (надежнее)
         const isCurrentlyDone = localStorage.getItem(key) === 'true';
 
         if (!isCurrentlyDone) { 
+            // Если было НЕ выполнено -> Ставим выполнение
+            localStorage.setItem(key, 'true'); 
+            totalXP += xp;
+
+            // FX эффекты
             if (element) { 
                 const rect = element.getBoundingClientRect(); 
                 const x = rect.left + window.scrollX + 10; 
@@ -432,15 +454,17 @@
                 spawnParticles(x, y, color); 
                 showFloatingXP(x + 20, y - 10, xp, color); 
             }
-            totalXP += xp;
-            localStorage.setItem(key, 'true'); 
         } else { 
-            totalXP -= xp;
+            // Если было выполнено -> Снимаем
             localStorage.removeItem(key); 
+            totalXP -= xp;
         } 
+        
         if(totalXP < 0) totalXP = 0; 
         localStorage.setItem('slv_total_xp', totalXP); 
-        setTimeout(() => renderAll(), 100); 
+        
+        // Небольшая задержка перед перерисовкой, чтобы увидеть анимацию галочки
+        setTimeout(() => renderAll(), 300); 
     }
 
     function renderDashboard() { 
@@ -458,9 +482,19 @@
         return `<div class="task-item ${isDone ? 'completed' : ''}"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask('${task.id}', ${task.xp}, this, '${color}')"><label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label></div>`; 
     }
     
-    function createOneOffHTML(task, type) {
-        const color = type==='mind' ? 'var(--soul-color)' : 'var(--danger)';
-        return `<div class="task-item"><input type="checkbox" onchange="completeOneOff('${task.id}', '${type}', ${task.xp}, '${task.text}', this)"><label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label></div>`;
+    function createHTML(task, dateStr, type) { 
+        const key = `slv_${dateStr}_${task.id}`; 
+        const isDone = localStorage.getItem(key) === 'true'; 
+        
+        let color = 'var(--primary)'; 
+        if (type === 'mind') color = 'var(--soul-color)'; 
+        if (type === 'bogdan') color = '#00ff9d';
+
+        // Важно: checked ставится только если isDone === true
+        return `<div class="task-item ${isDone ? 'completed' : ''}">
+            <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask('${task.id}', ${task.xp}, this, '${color}')">
+            <label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label>
+        </div>`; 
     }
 
     function completeOneOff(id, type, xp, text, element) {
@@ -523,20 +557,92 @@
     
     // --- FIXED HYDRATION & AIR ---
     function renderWaterCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); const g = userWeight * 30; document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; document.getElementById('waterCurrent').innerText = c; document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
-    function addWater(a) { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_water_${t}`; let c = parseInt(localStorage.getItem(k) || '0'); if (c + a < 0) return; c += a; localStorage.setItem(k, c); totalXP += (a/100); if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
-    
-    function renderAirCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_air_${t}`) || '0'); const g = 60; document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`; document.getElementById('airCurrent').innerText = c; document.getElementById('airBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
-    function addAir(a) { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_air_${t}`; let c = parseInt(localStorage.getItem(k) || '0'); if (c + a < 0) return; c += a; localStorage.setItem(k, c); const xpToAdd = (a/15) * 5; totalXP += xpToAdd; if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
-    
+  // --- 💧 ВОДА И ВОЗДУХ (ИСПРАВЛЕНО) ---
+    function renderWaterCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        // Обрати внимание: тут обратные кавычки ` `
+        const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
+        const g = userWeight * 30; 
+        document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; 
+        document.getElementById('waterCurrent').innerText = c; 
+        document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
+    }
+
+    // --- 💧 ВОДА (ИСПРАВЛЕНО) ---
+    function renderWaterCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        // В index.html были пропущены обратные кавычки
+        const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
+        const g = userWeight * 30; 
+        document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; 
+        document.getElementById('waterCurrent').innerText = c; 
+        document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
+    }
+
+    function addWater(a) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const k = `slv_water_${t}`; 
+        let c = parseInt(localStorage.getItem(k) || '0'); 
+        if (c + a < 0) return; 
+        c += a; 
+        localStorage.setItem(k, c); 
+        // Добавляем логику начисления XP как в slv.html
+        totalXP += (a/100); 
+        if(totalXP < 0) totalXP = 0; 
+        localStorage.setItem('slv_total_xp', totalXP); 
+        renderAll(); 
+    }
+
+    // --- 🌬️ ВОЗДУХ (ИСПРАВЛЕНО) ---
+    function renderAirCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const c = parseInt(localStorage.getItem(`slv_air_${t}`) || '0'); 
+        const g = 60; 
+        document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`; 
+        document.getElementById('airCurrent').innerText = c; 
+        document.getElementById('airBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
+    }
+
+    function addAir(a) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const k = `slv_air_${t}`; 
+        let c = parseInt(localStorage.getItem(k) || '0'); 
+        if (c + a < 0) return; 
+        c += a; 
+        localStorage.setItem(k, c); 
+        const xpToAdd = (a/15) * 5; 
+        totalXP += xpToAdd; 
+        if(totalXP < 0) totalXP = 0; 
+        localStorage.setItem('slv_total_xp', totalXP); 
+        renderAll(); 
+    }
+
     function saveSleep() {
-        const start = document.getElementById('sleepStart').value; const end = document.getElementById('sleepEnd').value;
+        const start = document.getElementById('sleepStart').value;
+        const end = document.getElementById('sleepEnd').value;
         if (!start || !end) { alert("Введите время"); return; }
-        const startDate = new Date(`2000-01-01T${start}`); let endDate = new Date(`2000-01-01T${end}`); if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
-        const diffMs = endDate - startDate; const hours = Math.floor(diffMs / 3600000); const minutes = Math.floor((diffMs % 3600000) / 60000); const diffText = `${hours} ч ${minutes} мин`;
+        
+        const startDate = new Date(`2000-01-01T${start}`); 
+        let endDate = new Date(`2000-01-01T${end}`); 
+        if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
+        
+        const diffMs = endDate - startDate; 
+        const hours = Math.floor(diffMs / 3600000); 
+        const minutes = Math.floor((diffMs % 3600000) / 60000); 
+        const diffText = `${hours} ч ${minutes} мин`;
+        
         document.getElementById('sleepResultDisplay').innerText = diffText;
-        const today = new Date().toLocaleDateString('ru-RU'); const key = `slv_sleep_${today}`;
-        if (!localStorage.getItem(key)) { totalXP += 10; localStorage.setItem('slv_total_xp', totalXP); updateHeaderUI(); }
-        localStorage.setItem(key, JSON.stringify({start: start, end: end, diff: diffText})); alert(`Сон сохранен: ${diffText}`); renderAll(); 
+        const today = new Date().toLocaleDateString('ru-RU'); 
+        const key = `slv_sleep_${today}`;
+        
+        if (!localStorage.getItem(key)) { 
+            totalXP += 10; 
+            localStorage.setItem('slv_total_xp', totalXP); 
+            updateHeaderUI(); 
+        }
+        localStorage.setItem(key, JSON.stringify({start: start, end: end, diff: diffText})); 
+        alert(`Сон сохранен: ${diffText}`); 
+        renderAll(); 
     }
     function getEnergyText(val) { if(val<=2) return "🧟 Зомби"; if(val<=4) return "🐢 Вялость"; if(val<=6) return "😐 Норма"; if(val<=8) return "💪 Бодрость"; return "🚀 Ракета"; }
     function updateEnergyUI(val) { energyValue = val; document.getElementById('energyVal').innerText = val; document.getElementById('energyText').innerText = getEnergyText(val); }
@@ -546,7 +652,60 @@
     function changeSport(id, d) { const t=new Date().toLocaleDateString('ru-RU'); let c=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0)+d; setSportExact(id, c<0?0:c); }
     function setSportExact(id, v) { const t=new Date().toLocaleDateString('ru-RU'); const old=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0); const val=parseInt(v); if(isNaN(val))return; const rate=sportExercises.find(e=>e.id===id).rate; localStorage.setItem(`slv_sport_${t}_${id}`, val); totalXP+=(val-old)*rate; if(totalXP<0)totalXP=0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
     
-    function drawWheel() { const canvas = document.getElementById('fizzWheel'); if (!canvas) return; const ctx = canvas.getContext('2d'); const width = canvas.width; const height = canvas.height; const centerX = width / 2; const centerY = height / 2; const radius = width / 2 - 5; ctx.clearRect(0, 0, width, height); if (fizzTasks.length === 0) { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); ctx.fill(); return; } const step = (2 * Math.PI) / fizzTasks.length; const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E']; for (let i = 0; i < fizzTasks.length; i++) { const startAngle = i * step; const endAngle = startAngle + step; ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath(); ctx.fillStyle = colors[i % colors.length]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#111'; ctx.stroke(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(startAngle + step / 2); ctx.textAlign = "right"; ctx.fillStyle = "#000"; ctx.font = "bold 14px Segoe UI"; ctx.fillText(fizzTasks[i].text.substring(0, 12) + (fizzTasks[i].text.length > 12 ? "..." : ""), radius - 10, 5); ctx.restore(); } }
+  // --- 🎡 КОЛЕСО (ИСПРАВЛЕНО) ---
+    function drawWheel() { 
+        const canvas = document.getElementById('fizzWheel'); 
+        if (!canvas) return; // Защита от ошибки, если вкладка скрыта или DOM не готов
+        
+        const ctx = canvas.getContext('2d'); 
+        const width = canvas.width; 
+        const height = canvas.height; 
+        const centerX = width / 2; 
+        const centerY = height / 2; 
+        const radius = width / 2 - 5; 
+        
+        ctx.clearRect(0, 0, width, height); 
+        
+        // Если задачи еще не загрузились, рисуем заглушку
+        if (!fizzTasks || fizzTasks.length === 0) { 
+            ctx.fillStyle = '#333'; 
+            ctx.beginPath(); 
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); 
+            ctx.fill(); 
+            // Пишем текст, что пусто
+            ctx.fillStyle = '#666';
+            ctx.font = "14px Segoe UI";
+            ctx.textAlign = "center";
+            ctx.fillText("Загрузка...", centerX, centerY);
+            return; 
+        } 
+        
+        const step = (2 * Math.PI) / fizzTasks.length; 
+        const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E']; 
+        
+        for (let i = 0; i < fizzTasks.length; i++) { 
+            const startAngle = i * step; 
+            const endAngle = startAngle + step; 
+            ctx.beginPath(); 
+            ctx.moveTo(centerX, centerY); 
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle); 
+            ctx.closePath(); 
+            ctx.fillStyle = colors[i % colors.length]; 
+            ctx.fill(); 
+            ctx.lineWidth = 2; 
+            ctx.strokeStyle = '#111'; 
+            ctx.stroke(); 
+            
+            ctx.save(); 
+            ctx.translate(centerX, centerY); 
+            ctx.rotate(startAngle + step / 2); 
+            ctx.textAlign = "right"; 
+            ctx.fillStyle = "#000"; 
+            ctx.font = "bold 14px Segoe UI"; 
+            ctx.fillText(fizzTasks[i].text.substring(0, 12) + (fizzTasks[i].text.length > 12 ? "..." : ""), radius - 10, 5); 
+            ctx.restore(); 
+        } 
+    }
     function startFizzTimer() { const display = document.getElementById('fizzTimerDisplay'); const startBtn = document.getElementById('btnStartTimer'); const doneBtn = document.getElementById('btnFizzDone'); startBtn.style.display = 'none'; display.style.display = 'block'; let timeLeft = 5 * 60; function tick() { const m = Math.floor(timeLeft / 60).toString().padStart(2, '0'); const s = (timeLeft % 60).toString().padStart(2, '0'); display.innerText = `${m}:${s}`; if (timeLeft <= 0) { clearInterval(fizzTimerInterval); display.innerText = "00:00"; display.style.color = "var(--success)"; doneBtn.disabled = false; doneBtn.style.opacity = '1'; doneBtn.style.cursor = 'pointer'; if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } timeLeft--; } tick(); fizzTimerInterval = setInterval(tick, 1000); }
     function spinWheel() { if (fizzTasks.length === 0) { alert("Добавь упражнения в редакторе!"); return; } const wheel = document.getElementById('fizzWheel'); const btn = document.querySelector('.fizz-btn'); btn.disabled = true; const randIndex = Math.floor(Math.random() * fizzTasks.length); currentFizz = fizzTasks[randIndex]; const sliceDeg = 360 / fizzTasks.length; const targetSliceAngle = 270 - (randIndex * sliceDeg) - (sliceDeg / 2); const finalRotation = (5 * 360) + targetSliceAngle; wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)"; wheel.style.transform = `rotate(${finalRotation}deg)`; setTimeout(() => { document.getElementById('fizzName').innerText = currentFizz.text; document.getElementById('fizzXP').innerText = `+${currentFizz.xp} XP`; document.getElementById('fizzResult').style.display = 'block'; const display = document.getElementById('fizzTimerDisplay'); display.style.display = 'none'; display.style.color = 'var(--fizz-color)'; display.innerText = '05:00'; document.getElementById('btnStartTimer').style.display = 'block'; const doneBtn = document.getElementById('btnFizzDone'); doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; doneBtn.style.cursor = 'not-allowed'; btn.disabled = false; }, 4000); }
     function completeFizz() { if(!currentFizz) return; clearInterval(fizzTimerInterval); const btn = document.getElementById('btnFizzDone'); const rect = btn.getBoundingClientRect(); spawnParticles(rect.left + 50, rect.top, 'var(--fizz-color)'); showFloatingXP(rect.left + 50, rect.top - 20, currentFizz.xp, 'var(--fizz-color)'); const t=new Date().toLocaleDateString('ru-RU'); localStorage.setItem(`slv_fizz_${t}_${Date.now()}`, JSON.stringify({text:currentFizz.text, xp:currentFizz.xp})); totalXP+=currentFizz.xp; localStorage.setItem('slv_total_xp', totalXP); setTimeout(() => { document.getElementById('fizzResult').style.display='none'; renderAll(); const wheel = document.getElementById('fizzWheel'); wheel.style.transition = 'none'; wheel.style.transform = 'rotate(0deg)'; }, 500); }
@@ -593,15 +752,51 @@
     function histItem(text, xp) { return `<div class="task-item completed" style="padding:8px; margin-bottom:6px;"><span style="color:var(--success);">✔</span> <label style="margin-left:10px;">${text}</label> <span style="color:var(--primary);">+${xp}</span></div>`; }
     function changeHistoryDate(d) { historyDate.setDate(historyDate.getDate()+d); renderHistory(); }
     function jumpToDate(v) { if(v) { historyDate=new Date(v); renderHistory(); } }
+    // --- ПОДСЧЕТ XP ЗА ДЕНЬ (ИСПРАВЛЕНО) ---
     function calcDailyXP(dateStr) {
-        let dXP = 0; [...myTasks, ...bogdanTasks].forEach(t => { if(localStorage.getItem(`slv_${dateStr}_${t.id}`) === 'true') dXP += (t.xp || 10); });
-        const w = parseInt(localStorage.getItem(`slv_water_${dateStr}`) || '0'); dXP += (w / 100);
-        const a = parseInt(localStorage.getItem(`slv_air_${dateStr}`) || '0'); dXP += ((a / 15) * 5);
-        sportExercises.forEach(s => { const c = parseInt(localStorage.getItem(`slv_sport_${dateStr}_${s.id}`) || '0'); if(c > 0) dXP += (c * s.rate); });
-        for(let i=0; i<localStorage.length; i++) { const key = localStorage.key(i); if(key.startsWith(`slv_fizz_${dateStr}_`)) { const data = JSON.parse(localStorage.getItem(key)); dXP += (data.xp || 5); } }
-        nutriConfig.forEach(cat => { const val = parseFloat(localStorage.getItem(`slv_nutri_${dateStr}_${cat.id}`) || '0'); dXP += (val * 2); });
+        let dXP = 0;
+        
+        // 1. Задачи (SLV + Богдан)
+        [...myTasks, ...bogdanTasks].forEach(t => {
+            if(localStorage.getItem(`slv_${dateStr}_${t.id}`) === 'true') dXP += (t.xp || 10);
+        });
+        
+        // 2. Вода
+        const w = parseInt(localStorage.getItem(`slv_water_${dateStr}`) || '0');
+        dXP += (w / 100);
+        
+        // 3. Воздух
+        const a = parseInt(localStorage.getItem(`slv_air_${dateStr}`) || '0');
+        dXP += ((a / 15) * 5);
+        
+        // 4. Спорт
+        sportExercises.forEach(s => {
+            const c = parseInt(localStorage.getItem(`slv_sport_${dateStr}_${s.id}`) || '0');
+            if(c > 0) dXP += (c * s.rate);
+        });
+        
+        // 5. Разминки
+        for(let i=0; i<localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if(key.startsWith(`slv_fizz_${dateStr}_`)) {
+                const data = JSON.parse(localStorage.getItem(key));
+                dXP += (data.xp || 5);
+            }
+        }
+        
+        // 6. Питание
+        nutriConfig.forEach(cat => {
+            const val = parseFloat(localStorage.getItem(`slv_nutri_${dateStr}_${cat.id}`) || '0');
+            dXP += (val * 2);
+        });
+        
+        // 7. Сон
         if (localStorage.getItem(`slv_sleep_${dateStr}`)) dXP += 10;
-        const oneOffLog = JSON.parse(localStorage.getItem(`slv_oneoff_log_${dateStr}`) || '[]'); oneOffLog.forEach(item => { dXP += item.xp; });
+        
+        // 8. Одноразовые задачи (Log)
+        const oneOffLog = JSON.parse(localStorage.getItem(`slv_oneoff_log_${dateStr}`) || '[]');
+        oneOffLog.forEach(item => { dXP += item.xp; });
+
         return dXP;
     }
     function updateComparison() {
@@ -618,4 +813,3 @@
 </script>
 </body>
 </html>
-}
