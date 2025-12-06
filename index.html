@@ -273,7 +273,7 @@
     <div class="nav"><button class="nav-btn active" onclick="switchTab('dash', this)">🏠</button><button class="nav-btn" onclick="switchTab('bogdan', this)">👦</button><button class="nav-btn" onclick="switchTab('stats', this)">📊</button><button class="nav-btn" onclick="switchTab('editor', this)">🛠</button><button class="nav-btn" onclick="switchTab('masters', this)">👥</button></div>
 
 <script>
-    // --- FIREBASE SETUP ---
+    // --- НАСТРОЙКИ FIREBASE ---
     const firebaseConfig = {
       apiKey: "AIzaSyAhkOgEtlG1Q2byn2PKB6iCySPqM5XocMY",
       authDomain: "slv-project-a51ff.firebaseapp.com",
@@ -288,22 +288,39 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     
-    // Включаем оффлайн-режим (кэш)
-    db.enablePersistence().catch(err => {
-        if (err.code == 'failed-precondition') { console.log('Tabs open'); } 
-        else if (err.code == 'unimplemented') { console.log('Browser not supported'); }
-    });
+    // Включаем оффлайн-режим
+    db.enablePersistence().catch(err => console.log('Persistence error:', err));
 
     let currentUser = null;
-    let dbData = {}; // Локальная копия данных из облака
+    let headerClicks = 0, headerTimer;
+    let fizzTimerInterval = null;
 
-    // --- AUTH LOGIC ---
+    // --- ПЕРЕХВАТЧИКИ СОХРАНЕНИЯ (СИНХРОНИЗАЦИЯ) ---
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = function(key, value) {
+        originalSetItem.apply(this, [key, value]);
+        if (currentUser) {
+            db.collection('users').doc(currentUser.uid).set({ [key]: value }, { merge: true });
+        }
+    };
+
+    const originalRemoveItem = localStorage.removeItem;
+    localStorage.removeItem = function(key) {
+        originalRemoveItem.apply(this, [key]);
+        if (currentUser) {
+            db.collection('users').doc(currentUser.uid).update({
+                [key]: firebase.firestore.FieldValue.delete()
+            }).catch(e => {}); // Игнорируем ошибки удаления, если поля уже нет
+        }
+    };
+
+    // --- АВТОРИЗАЦИЯ ---
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('currentUserEmail').innerText = user.email;
-            loadDataFromCloud();
+            startCloudSync();
         } else {
             document.getElementById('auth-screen').style.display = 'flex';
         }
@@ -311,54 +328,44 @@
 
     function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(error => {
-            alert("Ошибка входа: " + error.message);
-        });
+        auth.signInWithPopup(provider).catch(e => alert("Ошибка: " + e.message));
     }
 
-    // --- CLOUD SYNC CORE ---
-    // Мы подменяем localStorage на dbData, чтобы не переписывать весь код
-    // При старте загружаем всё в dbData.
-    // При сохранении пишем в dbData И отправляем в Cloud.
-
-  function loadDataFromCloud() {
+    // --- УМНАЯ СИНХРОНИЗАЦИЯ ---
+    function startCloudSync() {
         db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
+            // ВАЖНО: Если есть "pendingWrites" (ожидающие записи), значит мы только что
+            // что-то нажали. В этом случае НЕ запускаем Чистильщика, чтобы он не удалил
+            // нашу новую галочку до того, как она долетит до сервера.
+            const isLocalChange = doc.metadata.hasPendingWrites;
+
             if (doc.exists) {
                 const data = doc.data();
 
-                // 1. ЧИСТИЛЬЩИК (НОВОЕ): Удаляем локально то, чего больше нет в облаке
-                Object.keys(localStorage).forEach(key => {
-                    // Проверяем только наши ключи (slv_ и bogdan_), чтобы не стереть системные
-                    if ((key.startsWith('slv_') || key.startsWith('bogdan_')) && !data.hasOwnProperty(key)) {
-                        originalRemoveItem.apply(localStorage, [key]);
-                    }
-                });
+                // 1. ЧИСТИЛЬЩИК (Работает только если нет локальных изменений)
+                if (!isLocalChange) {
+                    Object.keys(localStorage).forEach(key => {
+                        if ((key.startsWith('slv_') || key.startsWith('bogdan_')) && !data.hasOwnProperty(key)) {
+                            originalRemoveItem.apply(localStorage, [key]);
+                        }
+                    });
+                }
 
-                // 2. Записываем свежие данные из облака
+                // 2. Обновляем данные из облака
                 for (const [key, value] of Object.entries(data)) {
                     originalSetItem.apply(localStorage, [key, value]);
                 }
 
-                // 3. Обновляем переменные (стандартная логика)
-                const savedXP = localStorage.getItem('slv_total_xp');
-                if(savedXP) totalXP = parseInt(savedXP);
-                
-                const savedSLV = localStorage.getItem('slv_config_tasks'); myTasks = savedSLV ? JSON.parse(savedSLV) : defaultSLV;
-                const savedMind = localStorage.getItem('slv_config_mind'); mindTasks = savedMind ? JSON.parse(savedMind) : [];
-                const savedChores = localStorage.getItem('slv_config_chores'); choreTasks = savedChores ? JSON.parse(savedChores) : [];
-                const savedBogdan = localStorage.getItem('bogdan_config_tasks'); bogdanTasks = savedBogdan ? JSON.parse(savedBogdan) : defaultBogdan;
-                const savedSport = localStorage.getItem('slv_config_sport'); sportExercises = savedSport ? JSON.parse(savedSport) : defaultSport;
-                const savedFizz = localStorage.getItem('slv_config_fizz'); fizzTasks = savedFizz ? JSON.parse(savedFizz) : defaultFizz;
-                const savedShadow = localStorage.getItem('slv_config_shadow'); shadowTasks = savedShadow ? JSON.parse(savedShadow) : defaultShadow;
-                const savedSoul = localStorage.getItem('slv_config_soul'); soulTasks = savedSoul ? JSON.parse(savedSoul) : defaultSoul;
-
-                // 4. Перерисовываем экран
+                // 3. Обновляем переменные и экран
+                loadVariables();
                 renderAll();
             } else {
-                init();
+                // Если новый юзер
+                initDefaults();
             }
         });
         
+        // Запуск таймеров и колеса (один раз)
         if (!window.appInitialized) {
              drawWheel();
              setInterval(checkReminders, 60000);
@@ -366,31 +373,7 @@
         }
     }
 
-    // Перехватчик записи: сохраняем и локально, и в облако
-    const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key, value) {
-        originalSetItem.apply(this, [key, value]); // Пишем в браузер
-        
-        if (currentUser) {
-            // Пишем в облако (Debounce можно добавить, но пока пишем напрямую)
-            db.collection('users').doc(currentUser.uid).set({
-                [key]: value
-            }, { merge: true });
-        }
-    };
-    // ВОТ ТУТ НОВЫЙ КУСОК:
-    const originalRemoveItem = localStorage.removeItem;
-    localStorage.removeItem = function(key) {
-        originalRemoveItem.apply(this, [key]);
-        if (currentUser) {
-            db.collection('users').doc(currentUser.uid).update({
-                [key]: firebase.firestore.FieldValue.delete()
-            });
-        }
-    };
-    // ----------------------
-
-    // --- CONFIG & VARIABLES ---
+    // --- ПЕРЕМЕННЫЕ И ДАННЫЕ ---
     const xpPerLevel = 150;
     const defaultSLV = [{id: 't1', text: 'Утренняя зарядка', xp: 10},{id: 't2', text: 'Основная работа', xp: 20},{id: 't3', text: 'Программирование', xp: 15},{id: 't7', text: 'Контент', xp: 15}];
     const defaultBogdan = [{id: 'b1', text: 'Спорт / Капоэйра', xp: 15},{id: 'b6', text: 'Шахматы', xp: 10}];
@@ -404,15 +387,41 @@
     const imgMid = "https://i.imgur.com/WKo4lyU.jpeg";  
     const imgGod = "https://i.imgur.com/XJX2go9.jpeg";  
 
-    let totalXP = 0;
+    let totalXP = 0, userWeight = 70;
     let myTasks = [], mindTasks = [], choreTasks = [], bogdanTasks = [], sportExercises = [], fizzTasks = [], shadowTasks = [], soulTasks = [], secretNotes = [];
-    let userWeight = 70;
     let historyDate = new Date();
     let chartInstance = null, secretChartInstance = null;
     let currentFizz = null, energyValue = 5;
     let currentKey = null;
-    let headerClicks = 0, headerTimer;
-    let fizzTimerInterval = null;
+
+    function initDefaults() {
+        // Если данных нет совсем, грузим дефолт
+        myTasks = defaultSLV; bogdanTasks = defaultBogdan; sportExercises = defaultSport; fizzTasks = defaultFizz; shadowTasks = defaultShadow; soulTasks = defaultSoul;
+        renderAll();
+    }
+
+    function loadVariables() {
+        const savedXP = localStorage.getItem('slv_total_xp'); if(savedXP) totalXP = parseInt(savedXP);
+        const savedSLV = localStorage.getItem('slv_config_tasks'); myTasks = savedSLV ? JSON.parse(savedSLV) : defaultSLV;
+        const savedMind = localStorage.getItem('slv_config_mind'); mindTasks = savedMind ? JSON.parse(savedMind) : [];
+        const savedChores = localStorage.getItem('slv_config_chores'); choreTasks = savedChores ? JSON.parse(savedChores) : [];
+        const savedBogdan = localStorage.getItem('bogdan_config_tasks'); bogdanTasks = savedBogdan ? JSON.parse(savedBogdan) : defaultBogdan;
+        const savedSport = localStorage.getItem('slv_config_sport'); sportExercises = savedSport ? JSON.parse(savedSport) : defaultSport;
+        const savedFizz = localStorage.getItem('slv_config_fizz'); fizzTasks = savedFizz ? JSON.parse(savedFizz) : defaultFizz;
+        const savedShadow = localStorage.getItem('slv_config_shadow'); shadowTasks = savedShadow ? JSON.parse(savedShadow) : defaultShadow;
+        const savedSoul = localStorage.getItem('slv_config_soul'); soulTasks = savedSoul ? JSON.parse(savedSoul) : defaultSoul;
+        const savedWeight = localStorage.getItem('slv_user_weight'); if(savedWeight) userWeight = parseInt(savedWeight); document.getElementById('userWeight').value = userWeight;
+        
+        // Сон
+        const today = new Date().toLocaleDateString('ru-RU');
+        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`));
+        if(sleepData) { document.getElementById('sleepStart').value = sleepData.start; document.getElementById('sleepEnd').value = sleepData.end; document.getElementById('sleepResultDisplay').innerText = sleepData.diff; }
+    }
+
+    function renderAll() {
+        updateHeaderUI(); renderDashboard(); renderNutriCard(); renderSportCard(); renderAirCard();
+        renderWaterCard(); renderEnergy(); renderHistory(); renderEditorList(); updateAvatarImage(); updateComparison();
+    }
 
     // --- FX ENGINE ---
     function spawnParticles(x, y, color) {
@@ -433,121 +442,77 @@
         document.body.appendChild(el); setTimeout(() => el.remove(), 1000);
     }
 
-    // --- MAIN INIT ---
-    function init() {
-        const savedXP = localStorage.getItem('slv_total_xp');
-        if(savedXP) totalXP = parseInt(savedXP);
+    // --- ОСНОВНАЯ ЛОГИКА ЗАДАЧ (ИСПРАВЛЕНА) ---
+    function toggleTask(taskId, xp, element, color = '#4CC9F0') { 
+        const today = new Date().toLocaleDateString('ru-RU'); 
+        const key = `slv_${today}_${taskId}`; 
         
-        const savedSLV = localStorage.getItem('slv_config_tasks'); myTasks = savedSLV ? JSON.parse(savedSLV) : defaultSLV;
-        const savedMind = localStorage.getItem('slv_config_mind'); mindTasks = savedMind ? JSON.parse(savedMind) : [];
-        const savedChores = localStorage.getItem('slv_config_chores'); choreTasks = savedChores ? JSON.parse(savedChores) : [];
-        const savedBogdan = localStorage.getItem('bogdan_config_tasks'); bogdanTasks = savedBogdan ? JSON.parse(savedBogdan) : defaultBogdan;
-        const savedSport = localStorage.getItem('slv_config_sport'); sportExercises = savedSport ? JSON.parse(savedSport) : defaultSport;
-        const savedFizz = localStorage.getItem('slv_config_fizz'); fizzTasks = savedFizz ? JSON.parse(savedFizz) : defaultFizz;
-        const savedShadow = localStorage.getItem('slv_config_shadow'); shadowTasks = savedShadow ? JSON.parse(savedShadow) : defaultShadow;
-        const savedSoul = localStorage.getItem('slv_config_soul'); soulTasks = savedSoul ? JSON.parse(savedSoul) : defaultSoul;
+        // Сначала проверяем состояние
+        const isCurrentlyDone = localStorage.getItem(key) === 'true';
 
-        const savedWeight = localStorage.getItem('slv_user_weight');
-        if(savedWeight) userWeight = parseInt(savedWeight);
-        document.getElementById('userWeight').value = userWeight;
+        if (!isCurrentlyDone) { 
+            // ВЫПОЛНЯЕМ ЗАДАЧУ
+            // 1. Сначала запускаем визуал (пока элементы на месте)
+            if (element) { 
+                const rect = element.getBoundingClientRect(); 
+                const x = rect.left + window.scrollX + 10; 
+                const y = rect.top + window.scrollY; 
+                spawnParticles(x, y, color); 
+                showFloatingXP(x + 20, y - 10, xp, color); 
+            }
+            
+            // 2. Потом логику
+            totalXP += xp;
+            localStorage.setItem(key, 'true'); // Это отправит в облако
+        } else { 
+            // ОТМЕНЯЕМ ЗАДАЧУ
+            totalXP -= xp;
+            localStorage.removeItem(key); // Это удалит из облака
+        } 
         
-        const today = new Date().toLocaleDateString('ru-RU');
-        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`));
-        if(sleepData) {
-            document.getElementById('sleepStart').value = sleepData.start;
-            document.getElementById('sleepEnd').value = sleepData.end;
-            document.getElementById('sleepResultDisplay').innerText = sleepData.diff;
-        }
-
-        setInterval(checkReminders, 60000);
-        drawWheel();
-        renderAll();
+        if(totalXP < 0) totalXP = 0; 
+        localStorage.setItem('slv_total_xp', totalXP); 
+        
+        // 3. Обновляем интерфейс с небольшой задержкой, чтобы визуал отработал
+        setTimeout(() => renderAll(), 100); 
     }
 
-    function renderAll() {
-        updateHeaderUI(); renderDashboard(); renderNutriCard(); renderSportCard(); renderAirCard();
-        renderWaterCard(); renderEnergy(); renderHistory(); renderEditorList();
-        updateAvatarImage(); updateComparison();
+    function renderDashboard() { 
+        const dateStr = new Date().toLocaleDateString('ru-RU'); 
+        document.getElementById('dailyTasks').innerHTML = myTasks.map(task => createHTML(task, dateStr, 'daily')).join(''); 
+        document.getElementById('mindTasks').innerHTML = mindTasks.map(task => createHTML(task, dateStr, 'mind')).join('');
+        document.getElementById('choreTasks').innerHTML = choreTasks.map(task => createOneOffHTML(task, 'chores')).join('');
+        document.getElementById('bogdanTasks').innerHTML = bogdanTasks.map(task => createHTML(task, dateStr, 'bogdan')).join(''); 
+    }
+
+    function createHTML(task, dateStr, type) { 
+        const key = `slv_${dateStr}_${task.id}`; 
+        const isDone = localStorage.getItem(key) === 'true'; 
+        let color = 'var(--primary)'; if (type === 'mind') color = 'var(--soul-color)'; if (type === 'bogdan') color = '#00ff9d';
+        return `<div class="task-item ${isDone ? 'completed' : ''}"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask('${task.id}', ${task.xp}, this, '${color}')"><label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label></div>`; 
     }
     
-    // --- WHEEL & TIMER ---
-    function drawWheel() {
-        const canvas = document.getElementById('fizzWheel'); if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width; const height = canvas.height;
-        const centerX = width / 2; const centerY = height / 2; const radius = width / 2 - 5;
-        ctx.clearRect(0, 0, width, height);
-        if (fizzTasks.length === 0) { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); ctx.fill(); return; }
-        const step = (2 * Math.PI) / fizzTasks.length;
-        const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E'];
-        for (let i = 0; i < fizzTasks.length; i++) {
-            const startAngle = i * step; const endAngle = startAngle + step;
-            ctx.beginPath(); ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath();
-            ctx.fillStyle = colors[i % colors.length]; ctx.fill();
-            ctx.lineWidth = 2; ctx.strokeStyle = '#111'; ctx.stroke();
-            ctx.save(); ctx.translate(centerX, centerY);
-            ctx.rotate(startAngle + step / 2); ctx.textAlign = "right";
-            ctx.fillStyle = "#000"; ctx.font = "bold 14px Segoe UI";
-            ctx.fillText(fizzTasks[i].text.substring(0, 12) + (fizzTasks[i].text.length > 12 ? "..." : ""), radius - 10, 5);
-            ctx.restore();
-        }
-    }
-    function startFizzTimer() {
-        const display = document.getElementById('fizzTimerDisplay');
-        const startBtn = document.getElementById('btnStartTimer');
-        const doneBtn = document.getElementById('btnFizzDone');
-        startBtn.style.display = 'none'; display.style.display = 'block';
-        let timeLeft = 5 * 60; // 5 min
-        function tick() {
-            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-            const s = (timeLeft % 60).toString().padStart(2, '0');
-            display.innerText = `${m}:${s}`;
-            if (timeLeft <= 0) {
-                clearInterval(fizzTimerInterval);
-                display.innerText = "00:00"; display.style.color = "var(--success)";
-                doneBtn.disabled = false; doneBtn.style.opacity = '1'; doneBtn.style.cursor = 'pointer';
-                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-            }
-            timeLeft--;
-        }
-        tick(); fizzTimerInterval = setInterval(tick, 1000);
-    }
-    function spinWheel() {
-        if (fizzTasks.length === 0) { alert("Добавь упражнения в редакторе!"); return; }
-        const wheel = document.getElementById('fizzWheel'); const btn = document.querySelector('.fizz-btn');
-        btn.disabled = true;
-        const randIndex = Math.floor(Math.random() * fizzTasks.length);
-        currentFizz = fizzTasks[randIndex];
-        const sliceDeg = 360 / fizzTasks.length;
-        const targetSliceAngle = 270 - (randIndex * sliceDeg) - (sliceDeg / 2);
-        const finalRotation = (5 * 360) + targetSliceAngle;
-        wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
-        wheel.style.transform = `rotate(${finalRotation}deg)`;
-        setTimeout(() => {
-            document.getElementById('fizzName').innerText = currentFizz.text;
-            document.getElementById('fizzXP').innerText = `+${currentFizz.xp} XP`;
-            document.getElementById('fizzResult').style.display = 'block';
-            const display = document.getElementById('fizzTimerDisplay');
-            display.style.display = 'none'; display.style.color = 'var(--fizz-color)'; display.innerText = '05:00';
-            document.getElementById('btnStartTimer').style.display = 'block';
-            const doneBtn = document.getElementById('btnFizzDone');
-            doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; doneBtn.style.cursor = 'not-allowed';
-            btn.disabled = false;
-        }, 4000);
-    }
-    function completeFizz() {
-        if(!currentFizz) return;
-        clearInterval(fizzTimerInterval);
-        const btn = document.getElementById('btnFizzDone'); const rect = btn.getBoundingClientRect();
-        spawnParticles(rect.left + 50, rect.top, 'var(--fizz-color)'); showFloatingXP(rect.left + 50, rect.top - 20, currentFizz.xp, 'var(--fizz-color)');
-        const t=new Date().toLocaleDateString('ru-RU'); 
-        localStorage.setItem(`slv_fizz_${t}_${Date.now()}`, JSON.stringify({text:currentFizz.text, xp:currentFizz.xp})); 
-        totalXP+=currentFizz.xp; localStorage.setItem('slv_total_xp', totalXP); 
-        setTimeout(() => { document.getElementById('fizzResult').style.display='none'; renderAll(); const wheel = document.getElementById('fizzWheel'); wheel.style.transition = 'none'; wheel.style.transform = 'rotate(0deg)'; }, 500);
+    function createOneOffHTML(task, type) {
+        const color = type==='mind' ? 'var(--soul-color)' : 'var(--danger)';
+        return `<div class="task-item"><input type="checkbox" onchange="completeOneOff('${task.id}', '${type}', ${task.xp}, '${task.text}', this)"><label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label></div>`;
     }
 
-    // --- AVATAR & HUD ---
+    function completeOneOff(id, type, xp, text, element) {
+        if(!confirm('Выполнено? Задача переместится в архив.')) { renderDashboard(); return; } 
+        const color = type==='mind' ? '#E0AAFF' : '#EF476F';
+        if(element) { const rect = element.getBoundingClientRect(); spawnParticles(rect.left + 10, rect.top, color); showFloatingXP(rect.left + 30, rect.top - 10, xp, color); }
+        totalXP += xp; localStorage.setItem('slv_total_xp', totalXP);
+        const t = new Date().toLocaleDateString('ru-RU'); const logKey = `slv_oneoff_log_${t}`;
+        let log = JSON.parse(localStorage.getItem(logKey) || '[]'); log.push({ text: text, xp: xp, type: type }); localStorage.setItem(logKey, JSON.stringify(log));
+        if (type === 'chores') { choreTasks = choreTasks.filter(t => t.id !== id); localStorage.setItem('slv_config_chores', JSON.stringify(choreTasks)); }
+        setTimeout(() => renderAll(), 500);
+    }
+
+    // --- ОСТАЛЬНОЙ UI ---
+    function updateHeaderUI() { const level = Math.floor(totalXP / xpPerLevel) + 1; const progress = (totalXP % xpPerLevel) / xpPerLevel * 100; document.getElementById('userLevel').innerText = `Уровень ${level}`; document.getElementById('xpText').innerText = `${Math.floor(totalXP)} XP`; document.getElementById('xpBar').style.width = `${progress}%`; }
+    function switchTaskTab(tabName, btn) { document.querySelectorAll('.task-list-container').forEach(el => el.classList.remove('active')); document.querySelectorAll('.task-tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${tabName}`).classList.add('active'); btn.classList.add('active'); }
+    
+    // --- AVATAR ---
     function updateAvatarImage() {
         const today = new Date().toLocaleDateString('ru-RU');
         let rawScore = 0; 
@@ -570,7 +535,6 @@
         if (waterPct < 0.3) multiplier *= 0.6;
         if (sportCount === 0 && air === 0) multiplier *= 0.7;
         let finalPct = Math.floor(rawScore * multiplier); if (finalPct > 100) finalPct = 100;
-
         const img = document.getElementById('avatarImage'); const balanceBar = document.getElementById('hudBalanceBar');
         const balanceText = document.getElementById('hudBalanceText'); const systemStatus = document.getElementById('hudSystemStatus');
         const hudWater = document.getElementById('hudWaterVal'); const hudSleep = document.getElementById('hudSleepVal');
@@ -580,7 +544,6 @@
         if(hudAir) hudAir.innerText = air + 'м';
         if(hudNutri) hudNutri.innerText = Math.floor((nutriScore * varietyMultiplier / 15) * 100) + '%';
         if(hudSport) hudSport.innerText = sportCount;
-
         if (img && balanceBar) {
             balanceBar.style.height = `${finalPct}%`; balanceText.innerText = `${finalPct}%`;
             let visualState = 'weak'; 
@@ -591,54 +554,8 @@
         }
     }
 
-    // --- TASKS & ACTIONS ---
+    // --- OTHER HELPERS ---
     function headerClick() { headerClicks++; clearTimeout(headerTimer); if (headerClicks === 3) { openSecret(); headerClicks = 0; } else { headerTimer = setTimeout(() => headerClicks = 0, 500); } }
-    
-    function renderDashboard() { 
-        const dateStr = new Date().toLocaleDateString('ru-RU'); 
-        document.getElementById('dailyTasks').innerHTML = myTasks.map(task => createHTML(task, dateStr, 'daily')).join(''); 
-        document.getElementById('mindTasks').innerHTML = mindTasks.map(task => createHTML(task, dateStr, 'mind')).join('');
-        document.getElementById('choreTasks').innerHTML = choreTasks.map(task => createOneOffHTML(task, 'chores')).join('');
-        document.getElementById('bogdanTasks').innerHTML = bogdanTasks.map(task => createHTML(task, dateStr, 'bogdan')).join(''); 
-    }
-
-    function createHTML(task, dateStr, type) { 
-        const key = `slv_${dateStr}_${task.id}`; 
-        const isDone = localStorage.getItem(key) === 'true'; 
-        let color = 'var(--primary)'; if (type === 'mind') color = 'var(--soul-color)'; if (type === 'bogdan') color = '#00ff9d';
-        return `<div class="task-item ${isDone ? 'completed' : ''}"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask('${task.id}', ${task.xp}, this, '${color}')"><label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label></div>`; 
-    }
-    function createOneOffHTML(task, type) {
-        const color = type==='mind' ? 'var(--soul-color)' : 'var(--danger)';
-        return `<div class="task-item"><input type="checkbox" onchange="completeOneOff('${task.id}', '${type}', ${task.xp}, '${task.text}', this)"><label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label></div>`;
-    }
-
-    function toggleTask(taskId, xp, element, color = '#4CC9F0') { 
-        const today = new Date().toLocaleDateString('ru-RU'); const key = `slv_${today}_${taskId}`; 
-        if (localStorage.getItem(key) !== 'true') { 
-            localStorage.setItem(key, 'true'); totalXP += xp;
-            if (element) { const rect = element.getBoundingClientRect(); const x = rect.left + window.scrollX + 10; const y = rect.top + window.scrollY; spawnParticles(x, y, color); showFloatingXP(x + 20, y - 10, xp, color); }
-        } else { localStorage.removeItem(key); totalXP -= xp; } 
-        if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); 
-        setTimeout(() => renderAll(), 300); 
-    }
-    function completeOneOff(id, type, xp, text, element) {
-        if(!confirm('Выполнено? Задача переместится в архив.')) { renderDashboard(); return; } 
-        const color = type==='mind' ? '#E0AAFF' : '#EF476F';
-        if(element) { const rect = element.getBoundingClientRect(); spawnParticles(rect.left + 10, rect.top, color); showFloatingXP(rect.left + 30, rect.top - 10, xp, color); }
-        totalXP += xp; localStorage.setItem('slv_total_xp', totalXP);
-        const t = new Date().toLocaleDateString('ru-RU'); const logKey = `slv_oneoff_log_${t}`;
-        let log = JSON.parse(localStorage.getItem(logKey) || '[]'); log.push({ text: text, xp: xp, type: type }); localStorage.setItem(logKey, JSON.stringify(log));
-        if (type === 'chores') { choreTasks = choreTasks.filter(t => t.id !== id); localStorage.setItem('slv_config_chores', JSON.stringify(choreTasks)); }
-        setTimeout(() => renderAll(), 500);
-    }
-    function switchTaskTab(tabName, btn) {
-        document.querySelectorAll('.task-list-container').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.task-tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(`tab-${tabName}`).classList.add('active'); btn.classList.add('active');
-    }
-
-    // --- OTHER LOGIC (Water, Air, Sleep, Energy) ---
     function saveWeight(val) { if(val) { userWeight = parseInt(val); localStorage.setItem('slv_user_weight', userWeight); renderAll(); } }
     function renderWaterCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); const g = userWeight * 30; document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; document.getElementById('waterCurrent').innerText = c; document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
     function addWater(a) { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_water_${t}`; let c = parseInt(localStorage.getItem(k) || '0'); if (c + a < 0) return; c += a; localStorage.setItem(k, c); totalXP += (a/100); if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
@@ -662,6 +579,12 @@
     function changeSport(id, d) { const t=new Date().toLocaleDateString('ru-RU'); let c=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0)+d; setSportExact(id, c<0?0:c); }
     function setSportExact(id, v) { const t=new Date().toLocaleDateString('ru-RU'); const old=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0); const val=parseInt(v); if(isNaN(val))return; const rate=sportExercises.find(e=>e.id===id).rate; localStorage.setItem(`slv_sport_${t}_${id}`, val); totalXP+=(val-old)*rate; if(totalXP<0)totalXP=0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
     
+    // --- WHEEL ---
+    function drawWheel() { const canvas = document.getElementById('fizzWheel'); if (!canvas) return; const ctx = canvas.getContext('2d'); const width = canvas.width; const height = canvas.height; const centerX = width / 2; const centerY = height / 2; const radius = width / 2 - 5; ctx.clearRect(0, 0, width, height); if (fizzTasks.length === 0) { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); ctx.fill(); return; } const step = (2 * Math.PI) / fizzTasks.length; const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E']; for (let i = 0; i < fizzTasks.length; i++) { const startAngle = i * step; const endAngle = startAngle + step; ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath(); ctx.fillStyle = colors[i % colors.length]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#111'; ctx.stroke(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(startAngle + step / 2); ctx.textAlign = "right"; ctx.fillStyle = "#000"; ctx.font = "bold 14px Segoe UI"; ctx.fillText(fizzTasks[i].text.substring(0, 12) + (fizzTasks[i].text.length > 12 ? "..." : ""), radius - 10, 5); ctx.restore(); } }
+    function startFizzTimer() { const display = document.getElementById('fizzTimerDisplay'); const startBtn = document.getElementById('btnStartTimer'); const doneBtn = document.getElementById('btnFizzDone'); startBtn.style.display = 'none'; display.style.display = 'block'; let timeLeft = 5 * 60; function tick() { const m = Math.floor(timeLeft / 60).toString().padStart(2, '0'); const s = (timeLeft % 60).toString().padStart(2, '0'); display.innerText = `${m}:${s}`; if (timeLeft <= 0) { clearInterval(fizzTimerInterval); display.innerText = "00:00"; display.style.color = "var(--success)"; doneBtn.disabled = false; doneBtn.style.opacity = '1'; doneBtn.style.cursor = 'pointer'; if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } timeLeft--; } tick(); fizzTimerInterval = setInterval(tick, 1000); }
+    function spinWheel() { if (fizzTasks.length === 0) { alert("Добавь упражнения в редакторе!"); return; } const wheel = document.getElementById('fizzWheel'); const btn = document.querySelector('.fizz-btn'); btn.disabled = true; const randIndex = Math.floor(Math.random() * fizzTasks.length); currentFizz = fizzTasks[randIndex]; const sliceDeg = 360 / fizzTasks.length; const targetSliceAngle = 270 - (randIndex * sliceDeg) - (sliceDeg / 2); const finalRotation = (5 * 360) + targetSliceAngle; wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)"; wheel.style.transform = `rotate(${finalRotation}deg)`; setTimeout(() => { document.getElementById('fizzName').innerText = currentFizz.text; document.getElementById('fizzXP').innerText = `+${currentFizz.xp} XP`; document.getElementById('fizzResult').style.display = 'block'; const display = document.getElementById('fizzTimerDisplay'); display.style.display = 'none'; display.style.color = 'var(--fizz-color)'; display.innerText = '05:00'; document.getElementById('btnStartTimer').style.display = 'block'; const doneBtn = document.getElementById('btnFizzDone'); doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; doneBtn.style.cursor = 'not-allowed'; btn.disabled = false; }, 4000); }
+    function completeFizz() { if(!currentFizz) return; clearInterval(fizzTimerInterval); const btn = document.getElementById('btnFizzDone'); const rect = btn.getBoundingClientRect(); spawnParticles(rect.left + 50, rect.top, 'var(--fizz-color)'); showFloatingXP(rect.left + 50, rect.top - 20, currentFizz.xp, 'var(--fizz-color)'); const t=new Date().toLocaleDateString('ru-RU'); localStorage.setItem(`slv_fizz_${t}_${Date.now()}`, JSON.stringify({text:currentFizz.text, xp:currentFizz.xp})); totalXP+=currentFizz.xp; localStorage.setItem('slv_total_xp', totalXP); setTimeout(() => { document.getElementById('fizzResult').style.display='none'; renderAll(); const wheel = document.getElementById('fizzWheel'); wheel.style.transition = 'none'; wheel.style.transform = 'rotate(0deg)'; }, 500); }
+
     // --- EDITOR ---
     function addNewTask(){ const n=document.getElementById('newTaskName').value; const x=parseInt(document.getElementById('newTaskXP').value); const t=document.getElementById('targetList').value; if(!n)return; const o={id:'t_'+Date.now(), text:n, xp:x}; if(t==='daily'){ myTasks.push(o); localStorage.setItem('slv_config_tasks',JSON.stringify(myTasks)); } else if(t==='mind') { mindTasks.push(o); localStorage.setItem('slv_config_mind',JSON.stringify(mindTasks)); } else if(t==='chores') { choreTasks.push(o); localStorage.setItem('slv_config_chores',JSON.stringify(choreTasks)); } else if(t==='bogdan') { bogdanTasks.push(o); localStorage.setItem('bogdan_config_tasks',JSON.stringify(bogdanTasks)); } document.getElementById('newTaskName').value = ''; renderAll(); }
     function addNewSport() { const n=document.getElementById('newSportName').value, r=parseFloat(document.getElementById('newSportRate').value); if(!n)return; sportExercises.push({id:'sp_'+Date.now(),text:n,rate:r}); localStorage.setItem('slv_config_sport',JSON.stringify(sportExercises)); renderAll(); }
@@ -686,24 +609,10 @@
     function renderSecretScreen() { document.getElementById('shadowList').innerHTML = shadowTasks.map(t => { const key = `slv_secret_${new Date().toLocaleDateString('ru-RU')}_${t.id}`; const isDone = localStorage.getItem(key) === 'true'; return `<div style="display:flex;align-items:center;justify-content:space-between;background:#222;padding:10px;margin-bottom:5px;border-radius:5px;"><div style="display:flex;align-items:center;"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleSecretTask('${t.id}', ${t.xp})" style="width:20px;height:20px;margin-right:10px;accent-color:var(--shadow-color);"><span style="color:${isDone ? '#666' : 'white'};text-decoration:${isDone ? 'line-through' : 'none'}">${t.text}</span></div><button onclick="deleteSecretTask('${t.id}', 'shadow')" style="background:none;border:none;color:#666;cursor:pointer;">✖</button></div>`; }).join(''); document.getElementById('soulList').innerHTML = soulTasks.map(t => { const key = `slv_secret_${new Date().toLocaleDateString('ru-RU')}_${t.id}`; const isDone = localStorage.getItem(key) === 'true'; return `<div style="display:flex;align-items:center;justify-content:space-between;background:#222;padding:10px;margin-bottom:5px;border-radius:5px;"><div style="display:flex;align-items:center;"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleSecretTask('${t.id}', ${t.xp})" style="width:20px;height:20px;margin-right:10px;accent-color:var(--soul-color);"><span style="color:${isDone ? '#666' : 'white'};text-decoration:${isDone ? 'line-through' : 'none'}">${t.text}</span></div><button onclick="deleteSecretTask('${t.id}', 'soul')" style="background:none;border:none;color:#666;cursor:pointer;">✖</button></div>`; }).join(''); document.getElementById('secretNotesList').innerHTML = secretNotes.map(n => `<div class="note-item"><div class="note-header" onclick="toggleNoteBody('${n.id}')"><div><span id="note_arrow_${n.id}" class="note-arrow">▼</span><span class="note-title-text">${n.title || "Заметка"}</span><span class="note-date">${n.date}</span></div><button class="note-delete" onclick="event.stopPropagation(); deleteSecretNote('${n.id}')">✖</button></div><div id="note_body_${n.id}" class="note-body">${n.text}</div></div>`).join(''); const streaks = calculateStreaks(); document.getElementById('currentStreak').innerText = streaks.current; document.getElementById('bestStreak').innerText = streaks.best; setTimeout(renderSecretChart, 100); }
     function renderSecretChart() { const ctx = document.getElementById('secretChart'); if(!ctx) return; const labels = [], soulData = [], shadowData = []; for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const dateStr = d.toLocaleDateString('ru-RU'); labels.push(dateStr.slice(0,5)); let sVal = 0, shVal = 0; soulTasks.forEach(t => { if(localStorage.getItem(`slv_secret_${dateStr}_${t.id}`)==='true') sVal+=t.xp; }); shadowTasks.forEach(t => { if(localStorage.getItem(`slv_secret_${dateStr}_${t.id}`)==='true') shVal+=t.xp; }); soulData.push(sVal); shadowData.push(shVal); } if (secretChartInstance) secretChartInstance.destroy(); secretChartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [ { label: 'Душа', data: soulData, backgroundColor: '#E0AAFF' }, { label: 'Аскеза', data: shadowData, backgroundColor: '#6C757D' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#333' } }, x: { grid: { display: false } } } } }); }
 
-    // --- IMPORT/EXPORT & UI ---
-    function updateHeaderUI() { const level = Math.floor(totalXP / xpPerLevel) + 1; const progress = (totalXP % xpPerLevel) / xpPerLevel * 100; document.getElementById('userLevel').innerText = `Уровень ${level}`; document.getElementById('xpText').innerText = `${Math.floor(totalXP)} XP`; document.getElementById('xpBar').style.width = `${progress}%`; }
-    function renderNutriCard() { const t = new Date().toLocaleDateString('ru-RU'); document.getElementById('nutriList').innerHTML = nutriConfig.map(cat => { const goal = cat.calc(userWeight); const current = parseFloat(localStorage.getItem(`slv_nutri_${t}_${cat.id}`) || '0'); const percent = Math.min(100, (current/goal)*100); return `<div class="nutri-row"><div class="nutri-label"><span style="font-weight:bold; color:${cat.color}">${cat.label}</span><span style="color:#aaa">${current} / ${goal} порц.</span></div><div class="nutri-bar-bg"><div class="nutri-bar-fill" style="width:${percent}%; background:${cat.color}"></div></div><div class="nutri-controls"><button class="nutri-btn btn-minus" onclick="addNutri('${cat.id}', -0.5)">-0.5</button><button class="nutri-btn" onclick="addNutri('${cat.id}', 0.5)">+0.5</button><button class="nutri-btn" onclick="addNutri('${cat.id}', 1)">+1.0</button></div></div>`; }).join(''); }
-    function addNutri(catId, amount) { const t = new Date().toLocaleDateString('ru-RU'); const key = `slv_nutri_${t}_${catId}`; let current = parseFloat(localStorage.getItem(key) || '0'); if (current + amount < 0) return; current += amount; localStorage.setItem(key, current); totalXP += (amount * 2); if (totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
-    function toggleNutri() { const c=document.getElementById('nutriContent');c.classList.toggle('open');document.getElementById('nutriArrow').innerText=c.classList.contains('open')?'▲':'▼'; }
-    function toggleNutriHelp() { const c=document.getElementById('nutriHelpContent');c.style.display=(c.style.display==='block')?'none':'block';document.getElementById('nutriHelpArrow').innerText=(c.style.display==='block')?'▲':'▼'; }
-    function toggleSport() { const c=document.getElementById('sportContent');c.classList.toggle('open');document.getElementById('sportArrow').innerText=c.classList.contains('open')?'▲':'▼'; }
-    function toggleTasks() { const c=document.getElementById('tasksContent');c.classList.toggle('open');document.getElementById('tasksArrow').innerText=c.classList.contains('open')?'▲':'▼'; }
-    function checkReminders() { if (Notification.permission !== "granted") return; const now = new Date(); if (now.getMinutes() === 0 && [12,14,16,18,20].includes(now.getHours())) { new Notification("⚡ 5-минутка!", { body: "Пора размяться!" }); } }
+    // --- IMPORT/EXPORT ---
+    function importData(i) { const f = i.files[0]; if(!f) return; const r = new FileReader(); r.onload = function(e) { try { const d = JSON.parse(e.target.result); for(let k in d) localStorage.setItem(k, d[k]); alert('Данные перенесены и отправлены в облако!'); location.reload(); } catch(e) { alert('Ошибка файла'); } }; r.readAsText(f); }
     
-    // Функция импорта из файла (для переезда)
-    function importData(i) { const f = i.files[0]; if(!f) return; const r = new FileReader(); r.onload = function(e) { try { const d = JSON.parse(e.target.result); 
-        // При импорте мы тоже триггерим облачную запись
-        for(let k in d) localStorage.setItem(k, d[k]); 
-        alert('Данные перенесены и отправлены в облако!'); location.reload(); 
-    } catch(e) { alert('Ошибка файла'); } }; r.readAsText(f); }
-    
-    // СТАТИСТИКА
+    // --- STATISTICS ---
     function renderHistory() { const dateStr = historyDate.toLocaleDateString('ru-RU'); const yyyy = historyDate.getFullYear(); const mm = String(historyDate.getMonth() + 1).padStart(2, '0'); const dd = String(historyDate.getDate()).padStart(2, '0'); const dInput = document.getElementById('historyDateInput'); if(dInput) dInput.value = `${yyyy}-${mm}-${dd}`; let dayXP = 0; let slvH = '', bogdanH = '', sportH = '', fizzH = '', waterH = '', energyH = '', sleepH = '', airH = '';
         const oneOffLog = JSON.parse(localStorage.getItem(`slv_oneoff_log_${dateStr}`) || '[]');
         oneOffLog.forEach(item => { dayXP += item.xp; const icon = item.type === 'mind' ? '👁️' : '🧹'; const color = item.type === 'mind' ? 'var(--soul-color)' : 'var(--danger)'; slvH += `<div class="task-item completed" style="padding:8px; margin-bottom:6px;"><span style="color:${color};">${icon}</span> <label style="margin-left:10px;">${item.text}</label> <span style="color:var(--primary);">+${item.xp}</span></div>`; });
@@ -740,8 +649,6 @@
         const elVal = document.getElementById('compVal'); const elTxt = document.getElementById('compText'); if (!elVal) return;
         if (xpYest === 0) { if (xpToday > 0) { elVal.innerText = "🚀 СТАРТ!"; elVal.style.color = "var(--success)"; elTxt.innerText = "Вчера активности не было"; } else { elVal.innerText = "😴 Zzz..."; elVal.style.color = "#666"; elTxt.innerText = "Пока нет данных для сравнения"; } } else { const diff = xpToday - xpYest; const percent = ((diff / xpYest) * 100).toFixed(1); if (diff > 0) { elVal.innerText = `+${percent}% 📈`; elVal.style.color = "var(--success)"; elTxt.innerText = `Ты лучше, чем вчера на ${Math.floor(diff)} XP`; } else if (diff < 0) { elVal.innerText = `${percent}% 📉`; elVal.style.color = "var(--danger)"; elTxt.innerText = `Отстаешь от вчерашнего на ${Math.floor(Math.abs(diff))} XP`; } else { elVal.innerText = "= 0%"; elVal.style.color = "var(--warning)"; elTxt.innerText = "Идешь ровно в графике вчерашнего дня"; } }
     }
-
-    // CHART LOGIC
     function getChartData(period) { const dailyData = {}; const taskMap = {}; [...myTasks, ...bogdanTasks].forEach(t => taskMap[t.id] = t.xp); for(let i=0; i<localStorage.length; i++) { const key = localStorage.key(i); if(key.startsWith('slv_') && !key.includes('secret') && !key.includes('sleep')) { const parts = key.split('_'); if(parts.length >= 3 && !key.includes('sport') && !key.includes('fizz') && !key.includes('water') && !key.includes('air') && !key.includes('nutri') && !key.includes('energy')) { const date = parts[1]; const id = parts.slice(2).join('_'); if(localStorage.getItem(key) === 'true') dailyData[date] = (dailyData[date] || 0) + (taskMap[id] || 0); } } if(key.startsWith('slv_fizz_')) { const parts = key.split('_'); if(parts.length >= 4) { const date = parts[2]; const data = JSON.parse(localStorage.getItem(key)); dailyData[date] = (dailyData[date] || 0) + data.xp; } } if(key.startsWith('slv_nutri_')) { const parts = key.split('_'); if(parts.length >= 4) { const date = parts[2]; const val = parseFloat(localStorage.getItem(key)); if(val > 0) dailyData[date] = (dailyData[date] || 0) + (val * 2); } } } const sportMap = {}; sportExercises.forEach(s => sportMap[s.id] = s.rate); for(let i=0; i<localStorage.length; i++) { const key = localStorage.key(i); if(key.startsWith('slv_sport_')) { const parts = key.split('_'); if(parts.length >= 4) { const date = parts[2]; const id = parts.slice(3).join('_'); const count = parseInt(localStorage.getItem(key)); if(count > 0) dailyData[date] = (dailyData[date] || 0) + (count * (sportMap[id] || 0)); } } if(key.startsWith('slv_water_')) { const parts = key.split('_'); if(parts.length === 3) { const date = parts[2]; const val = parseInt(localStorage.getItem(key)); if(val>0) dailyData[date] = (dailyData[date] || 0) + (val / 100); } } if(key.startsWith('slv_air_')) { const parts = key.split('_'); if(parts.length === 3) { const date = parts[2]; const val = parseInt(localStorage.getItem(key)); if(val>0) dailyData[date] = (dailyData[date] || 0) + ((val/15)*5); } } } let days = Object.keys(dailyData).sort((a,b) => { const [d1,m1,y1] = a.split('.'); const [d2,m2,y2] = b.split('.'); return new Date(`${y1}-${m1}-${d1}`) - new Date(`${y2}-${m2}-${d2}`); }); const today = new Date(); if(period === 'month') { const cutoff = new Date(); cutoff.setDate(today.getDate() - 30); days = days.filter(d => { const [dd,mm,yyyy]=d.split('.'); return new Date(`${yyyy}-${mm}-${dd}`) >= cutoff; }); } else if(period === 'year') { const cutoff = new Date(); cutoff.setDate(today.getDate() - 365); days = days.filter(d => { const [dd,mm,yyyy]=d.split('.'); return new Date(`${yyyy}-${mm}-${dd}`) >= cutoff; }); } return { labels: days.map(d => d.slice(0,5)), values: days.map(d => dailyData[d]) }; }
     function updateChartPeriod(p, btn) { document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderChart(p); }
     function renderChart(p) { const ctx = document.getElementById('xpChart'); if(!ctx) return; const data = getChartData(p); if(chartInstance) chartInstance.destroy(); const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400); gradient.addColorStop(0, 'rgba(76, 201, 240, 0.5)'); gradient.addColorStop(1, 'rgba(76, 201, 240, 0.0)'); chartInstance = new Chart(ctx, { type: 'line', data: { labels: data.labels, datasets: [{ label: 'XP', data: data.values, backgroundColor: gradient, borderColor: '#4CC9F0', borderWidth: 2, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#333' }, ticks: { color: '#888' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } } }); }
@@ -749,6 +656,7 @@
 </script>
 </body>
 </html>
+
 
 
 
