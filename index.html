@@ -321,20 +321,25 @@
     // При старте загружаем всё в dbData.
     // При сохранении пишем в dbData И отправляем в Cloud.
 
-   function loadDataFromCloud() {
-        // МАГИЯ ЗДЕСЬ: Используем .onSnapshot вместо .get
-        // Это заставляет приложение постоянно "слушать" обновления
+  function loadDataFromCloud() {
         db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
             if (doc.exists) {
                 const data = doc.data();
-                
-                // 1. Тихо обновляем данные в браузере (не отправляя обратно в облако, чтобы не было петли)
+
+                // 1. ЧИСТИЛЬЩИК (НОВОЕ): Удаляем локально то, чего больше нет в облаке
+                Object.keys(localStorage).forEach(key => {
+                    // Проверяем только наши ключи (slv_ и bogdan_), чтобы не стереть системные
+                    if ((key.startsWith('slv_') || key.startsWith('bogdan_')) && !data.hasOwnProperty(key)) {
+                        originalRemoveItem.apply(localStorage, [key]);
+                    }
+                });
+
+                // 2. Записываем свежие данные из облака
                 for (const [key, value] of Object.entries(data)) {
                     originalSetItem.apply(localStorage, [key, value]);
                 }
 
-                // 2. Перезагружаем переменные из новых данных
-                // (Копируем логику из init, чтобы обновить массивы задач)
+                // 3. Обновляем переменные (стандартная логика)
                 const savedXP = localStorage.getItem('slv_total_xp');
                 if(savedXP) totalXP = parseInt(savedXP);
                 
@@ -347,16 +352,13 @@
                 const savedShadow = localStorage.getItem('slv_config_shadow'); shadowTasks = savedShadow ? JSON.parse(savedShadow) : defaultShadow;
                 const savedSoul = localStorage.getItem('slv_config_soul'); soulTasks = savedSoul ? JSON.parse(savedSoul) : defaultSoul;
 
-                // 3. Перерисовываем экран
+                // 4. Перерисовываем экран
                 renderAll();
-                console.log("♻️ Синхронизация: Данные обновлены!");
             } else {
-                console.log("Новый пользователь (или данные пусты)");
-                init(); // Если данных нет, просто запускаем стандартную инициализацию
+                init();
             }
         });
         
-        // Запускаем колесо и таймеры один раз при старте, чтобы они работали
         if (!window.appInitialized) {
              drawWheel();
              setInterval(checkReminders, 60000);
@@ -747,5 +749,6 @@
 </script>
 </body>
 </html>
+
 
 
