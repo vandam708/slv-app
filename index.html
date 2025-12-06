@@ -331,27 +331,36 @@
     }
 
     // --- CORE SYNC ---
+    // --- ЗАПУСК И СИНХРОНИЗАЦИЯ ---
     function startCloudSync() {
         db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
             const isLocalChange = doc.metadata.hasPendingWrites;
+            
             if (doc.exists) {
                 const data = doc.data();
+                
+                // Если изменение пришло из облака (а не мы сами нажали) - обновляем локально
                 if (!isLocalChange) {
-                    // Sync Cloud -> Local
                     for (const [key, value] of Object.entries(data)) {
                         originalSetItem.apply(localStorage, [key, value]);
                     }
                 }
+                
+                // Перезагружаем переменные и экран
                 loadVariables();
-                try { renderAll(); } catch(e) { console.error("Render error:", e); }
+                renderAll();
+                
+                // 🔥 ВАЖНО: Перерисовываем колесо после загрузки данных
+                setTimeout(drawWheel, 500); 
+                
             } else {
                 initDefaults();
             }
         });
         
-        // Init UI components once
+        // Гарантированный запуск интерфейса при старте
         if (!window.appInitialized) {
-             drawWheel();
+             setTimeout(drawWheel, 1000); // Рисуем колесо через секунду
              setInterval(checkReminders, 60000);
              window.appInitialized = true;
         }
@@ -530,20 +539,80 @@
     
     // --- FIXED HYDRATION & AIR ---
     function renderWaterCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); const g = userWeight * 30; document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; document.getElementById('waterCurrent').innerText = c; document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
-    function addWater(a) { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_water_${t}`; let c = parseInt(localStorage.getItem(k) || '0'); if (c + a < 0) return; c += a; localStorage.setItem(k, c); totalXP += (a/100); if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
-    
-    function renderAirCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_air_${t}`) || '0'); const g = 60; document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`; document.getElementById('airCurrent').innerText = c; document.getElementById('airBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
-    function addAir(a) { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_air_${t}`; let c = parseInt(localStorage.getItem(k) || '0'); if (c + a < 0) return; c += a; localStorage.setItem(k, c); const xpToAdd = (a/15) * 5; totalXP += xpToAdd; if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
-    
+  // --- 💧 ВОДА И ВОЗДУХ (ИСПРАВЛЕНО) ---
+    function renderWaterCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        // Обрати внимание: тут обратные кавычки ` `
+        const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
+        const g = userWeight * 30; 
+        document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; 
+        document.getElementById('waterCurrent').innerText = c; 
+        document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
+    }
+
+    function addWater(a) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const k = `slv_water_${t}`; // Обратные кавычки
+        let c = parseInt(localStorage.getItem(k) || '0'); 
+        if (c + a < 0) return; 
+        c += a; 
+        localStorage.setItem(k, c); 
+        // Логика начисления XP
+        totalXP += (a/100); 
+        if(totalXP < 0) totalXP = 0; 
+        localStorage.setItem('slv_total_xp', totalXP); 
+        renderAll(); 
+    }
+
+    function renderAirCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const c = parseInt(localStorage.getItem(`slv_air_${t}`) || '0'); 
+        const g = 60; 
+        document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`; 
+        document.getElementById('airCurrent').innerText = c; 
+        document.getElementById('airBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
+    }
+
+    function addAir(a) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const k = `slv_air_${t}`; 
+        let c = parseInt(localStorage.getItem(k) || '0'); 
+        if (c + a < 0) return; 
+        c += a; 
+        localStorage.setItem(k, c); 
+        const xpToAdd = (a/15) * 5; 
+        totalXP += xpToAdd; 
+        if(totalXP < 0) totalXP = 0; 
+        localStorage.setItem('slv_total_xp', totalXP); 
+        renderAll(); 
+    }
+
     function saveSleep() {
-        const start = document.getElementById('sleepStart').value; const end = document.getElementById('sleepEnd').value;
+        const start = document.getElementById('sleepStart').value;
+        const end = document.getElementById('sleepEnd').value;
         if (!start || !end) { alert("Введите время"); return; }
-        const startDate = new Date(`2000-01-01T${start}`); let endDate = new Date(`2000-01-01T${end}`); if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
-        const diffMs = endDate - startDate; const hours = Math.floor(diffMs / 3600000); const minutes = Math.floor((diffMs % 3600000) / 60000); const diffText = `${hours} ч ${minutes} мин`;
+        
+        const startDate = new Date(`2000-01-01T${start}`); 
+        let endDate = new Date(`2000-01-01T${end}`); 
+        if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
+        
+        const diffMs = endDate - startDate; 
+        const hours = Math.floor(diffMs / 3600000); 
+        const minutes = Math.floor((diffMs % 3600000) / 60000); 
+        const diffText = `${hours} ч ${minutes} мин`;
+        
         document.getElementById('sleepResultDisplay').innerText = diffText;
-        const today = new Date().toLocaleDateString('ru-RU'); const key = `slv_sleep_${today}`;
-        if (!localStorage.getItem(key)) { totalXP += 10; localStorage.setItem('slv_total_xp', totalXP); updateHeaderUI(); }
-        localStorage.setItem(key, JSON.stringify({start: start, end: end, diff: diffText})); alert(`Сон сохранен: ${diffText}`); renderAll(); 
+        const today = new Date().toLocaleDateString('ru-RU'); 
+        const key = `slv_sleep_${today}`;
+        
+        if (!localStorage.getItem(key)) { 
+            totalXP += 10; 
+            localStorage.setItem('slv_total_xp', totalXP); 
+            updateHeaderUI(); 
+        }
+        localStorage.setItem(key, JSON.stringify({start: start, end: end, diff: diffText})); 
+        alert(`Сон сохранен: ${diffText}`); 
+        renderAll(); 
     }
     function getEnergyText(val) { if(val<=2) return "🧟 Зомби"; if(val<=4) return "🐢 Вялость"; if(val<=6) return "😐 Норма"; if(val<=8) return "💪 Бодрость"; return "🚀 Ракета"; }
     function updateEnergyUI(val) { energyValue = val; document.getElementById('energyVal').innerText = val; document.getElementById('energyText').innerText = getEnergyText(val); }
@@ -553,7 +622,54 @@
     function changeSport(id, d) { const t=new Date().toLocaleDateString('ru-RU'); let c=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0)+d; setSportExact(id, c<0?0:c); }
     function setSportExact(id, v) { const t=new Date().toLocaleDateString('ru-RU'); const old=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0); const val=parseInt(v); if(isNaN(val))return; const rate=sportExercises.find(e=>e.id===id).rate; localStorage.setItem(`slv_sport_${t}_${id}`, val); totalXP+=(val-old)*rate; if(totalXP<0)totalXP=0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
     
-    function drawWheel() { const canvas = document.getElementById('fizzWheel'); if (!canvas) return; const ctx = canvas.getContext('2d'); const width = canvas.width; const height = canvas.height; const centerX = width / 2; const centerY = height / 2; const radius = width / 2 - 5; ctx.clearRect(0, 0, width, height); if (fizzTasks.length === 0) { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); ctx.fill(); return; } const step = (2 * Math.PI) / fizzTasks.length; const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E']; for (let i = 0; i < fizzTasks.length; i++) { const startAngle = i * step; const endAngle = startAngle + step; ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath(); ctx.fillStyle = colors[i % colors.length]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#111'; ctx.stroke(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(startAngle + step / 2); ctx.textAlign = "right"; ctx.fillStyle = "#000"; ctx.font = "bold 14px Segoe UI"; ctx.fillText(fizzTasks[i].text.substring(0, 12) + (fizzTasks[i].text.length > 12 ? "..." : ""), radius - 10, 5); ctx.restore(); } }
+  // --- 🎡 КОЛЕСО (ИСПРАВЛЕНО) ---
+    function drawWheel() { 
+        const canvas = document.getElementById('fizzWheel'); 
+        if (!canvas) { console.log('Canvas not found'); return; } // Защита от ошибки
+        
+        const ctx = canvas.getContext('2d'); 
+        const width = canvas.width; 
+        const height = canvas.height; 
+        const centerX = width / 2; 
+        const centerY = height / 2; 
+        const radius = width / 2 - 5; 
+        
+        ctx.clearRect(0, 0, width, height); 
+        
+        if (!fizzTasks || fizzTasks.length === 0) { 
+            ctx.fillStyle = '#333'; 
+            ctx.beginPath(); 
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); 
+            ctx.fill(); 
+            return; 
+        } 
+        
+        const step = (2 * Math.PI) / fizzTasks.length; 
+        const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E']; 
+        
+        for (let i = 0; i < fizzTasks.length; i++) { 
+            const startAngle = i * step; 
+            const endAngle = startAngle + step; 
+            ctx.beginPath(); 
+            ctx.moveTo(centerX, centerY); 
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle); 
+            ctx.closePath(); 
+            ctx.fillStyle = colors[i % colors.length]; 
+            ctx.fill(); 
+            ctx.lineWidth = 2; 
+            ctx.strokeStyle = '#111'; 
+            ctx.stroke(); 
+            
+            ctx.save(); 
+            ctx.translate(centerX, centerY); 
+            ctx.rotate(startAngle + step / 2); 
+            ctx.textAlign = "right"; 
+            ctx.fillStyle = "#000"; 
+            ctx.font = "bold 14px Segoe UI"; 
+            ctx.fillText(fizzTasks[i].text.substring(0, 12) + (fizzTasks[i].text.length > 12 ? "..." : ""), radius - 10, 5); 
+            ctx.restore(); 
+        } 
+    }
     function startFizzTimer() { const display = document.getElementById('fizzTimerDisplay'); const startBtn = document.getElementById('btnStartTimer'); const doneBtn = document.getElementById('btnFizzDone'); startBtn.style.display = 'none'; display.style.display = 'block'; let timeLeft = 5 * 60; function tick() { const m = Math.floor(timeLeft / 60).toString().padStart(2, '0'); const s = (timeLeft % 60).toString().padStart(2, '0'); display.innerText = `${m}:${s}`; if (timeLeft <= 0) { clearInterval(fizzTimerInterval); display.innerText = "00:00"; display.style.color = "var(--success)"; doneBtn.disabled = false; doneBtn.style.opacity = '1'; doneBtn.style.cursor = 'pointer'; if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } timeLeft--; } tick(); fizzTimerInterval = setInterval(tick, 1000); }
     function spinWheel() { if (fizzTasks.length === 0) { alert("Добавь упражнения в редакторе!"); return; } const wheel = document.getElementById('fizzWheel'); const btn = document.querySelector('.fizz-btn'); btn.disabled = true; const randIndex = Math.floor(Math.random() * fizzTasks.length); currentFizz = fizzTasks[randIndex]; const sliceDeg = 360 / fizzTasks.length; const targetSliceAngle = 270 - (randIndex * sliceDeg) - (sliceDeg / 2); const finalRotation = (5 * 360) + targetSliceAngle; wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)"; wheel.style.transform = `rotate(${finalRotation}deg)`; setTimeout(() => { document.getElementById('fizzName').innerText = currentFizz.text; document.getElementById('fizzXP').innerText = `+${currentFizz.xp} XP`; document.getElementById('fizzResult').style.display = 'block'; const display = document.getElementById('fizzTimerDisplay'); display.style.display = 'none'; display.style.color = 'var(--fizz-color)'; display.innerText = '05:00'; document.getElementById('btnStartTimer').style.display = 'block'; const doneBtn = document.getElementById('btnFizzDone'); doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; doneBtn.style.cursor = 'not-allowed'; btn.disabled = false; }, 4000); }
     function completeFizz() { if(!currentFizz) return; clearInterval(fizzTimerInterval); const btn = document.getElementById('btnFizzDone'); const rect = btn.getBoundingClientRect(); spawnParticles(rect.left + 50, rect.top, 'var(--fizz-color)'); showFloatingXP(rect.left + 50, rect.top - 20, currentFizz.xp, 'var(--fizz-color)'); const t=new Date().toLocaleDateString('ru-RU'); localStorage.setItem(`slv_fizz_${t}_${Date.now()}`, JSON.stringify({text:currentFizz.text, xp:currentFizz.xp})); totalXP+=currentFizz.xp; localStorage.setItem('slv_total_xp', totalXP); setTimeout(() => { document.getElementById('fizzResult').style.display='none'; renderAll(); const wheel = document.getElementById('fizzWheel'); wheel.style.transition = 'none'; wheel.style.transform = 'rotate(0deg)'; }, 500); }
