@@ -495,11 +495,14 @@
         document.getElementById('choreTasks').innerHTML = choreTasks.map(task => createOneOffHTML(task, 'chores')).join('');
         document.getElementById('bogdanTasks').innerHTML = bogdanTasks.map(task => createHTML(task, dateStr, 'bogdan')).join(''); 
     }
-// --- 🧬 НУТРИЦИОЛОГИЯ (БЫЛО ПРОПУЩЕНО) ---
+// --- 🧬 НУТРИЦИОЛОГИЯ (ВОССТАНОВЛЕНО) ---
     function renderNutriCard() { 
         const t = new Date().toLocaleDateString('ru-RU'); 
+        // Проверяем, есть ли конфиг, если нет - ставим заглушку, чтобы не падало
+        if (typeof nutriConfig === 'undefined') return;
+        
         document.getElementById('nutriList').innerHTML = nutriConfig.map(cat => { 
-            const goal = cat.calc(userWeight); 
+            const goal = cat.calc(userWeight > 0 ? userWeight : 70); 
             const current = parseFloat(localStorage.getItem(`slv_nutri_${t}_${cat.id}`) || '0'); 
             const percent = Math.min(100, (current/goal)*100); 
             return `<div class="nutri-row">
@@ -599,15 +602,20 @@
     // --- FIXED HYDRATION & AIR ---
    
 
-    // --- 💧 ВОДА (ИСПРАВЛЕНО) ---
+   // --- 💧 ВОДА (ИСПРАВЛЕНО И ЗАЩИЩЕНО) ---
     function renderWaterCard() { 
         const t = new Date().toLocaleDateString('ru-RU'); 
-        // В index.html были пропущены обратные кавычки
         const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
-        const g = userWeight * 30; 
+        // Защита: если вес 0, считаем как 70кг, чтобы шкала не была бесконечной
+        const safeWeight = userWeight > 0 ? userWeight : 70;
+        const g = safeWeight * 30; 
+        
         document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; 
         document.getElementById('waterCurrent').innerText = c; 
-        document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
+        
+        // Защита от деления на ноль
+        const pct = g > 0 ? Math.min(100, (c/g)*100) : 0;
+        document.getElementById('waterBar').style.width = `${pct}%`; 
     }
 
     function addWater(a) { 
@@ -617,7 +625,8 @@
         if (c + a < 0) return; 
         c += a; 
         localStorage.setItem(k, c); 
-        // Добавляем логику начисления XP как в slv.html
+        
+        // Начисление XP
         totalXP += (a/100); 
         if(totalXP < 0) totalXP = 0; 
         localStorage.setItem('slv_total_xp', totalXP); 
@@ -629,6 +638,7 @@
         const t = new Date().toLocaleDateString('ru-RU'); 
         const c = parseInt(localStorage.getItem(`slv_air_${t}`) || '0'); 
         const g = 60; 
+        
         document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`; 
         document.getElementById('airCurrent').innerText = c; 
         document.getElementById('airBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
@@ -641,6 +651,8 @@
         if (c + a < 0) return; 
         c += a; 
         localStorage.setItem(k, c); 
+        
+        // Начисление XP
         const xpToAdd = (a/15) * 5; 
         totalXP += xpToAdd; 
         if(totalXP < 0) totalXP = 0; 
