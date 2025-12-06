@@ -456,75 +456,90 @@
 
   // --- ЗАДАЧИ И XP (ИСПРАВЛЕНО) ---
     function toggleTask(taskId, xp, element, color = '#4CC9F0') { 
-        const today = new Date().toLocaleDateString('ru-RU'); 
-        const key = `slv_${today}_${taskId}`; 
-        
-        // Проверяем текущее состояние в хранилище, а не по галочке (надежнее)
-        const isCurrentlyDone = localStorage.getItem(key) === 'true';
+    const today = new Date().toLocaleDateString('ru-RU'); 
+    const key = `slv_${today}_${taskId}`; 
+    
+    // Проверяем ТЕКУЩЕЕ состояние в хранилище, а не по галочке
+    const isCurrentlyDone = localStorage.getItem(key) === 'true';
 
-        if (!isCurrentlyDone) { 
-            // Если было НЕ выполнено -> Ставим выполнение
-            localStorage.setItem(key, 'true'); 
-            totalXP += xp;
+    if (!isCurrentlyDone) { 
+        // Ставим выполнение
+        localStorage.setItem(key, 'true'); 
+        totalXP += xp;
 
-            // FX эффекты
-            if (element) { 
-                const rect = element.getBoundingClientRect(); 
-                const x = rect.left + window.scrollX + 10; 
-                const y = rect.top + window.scrollY; 
-                spawnParticles(x, y, color); 
-                showFloatingXP(x + 20, y - 10, xp, color); 
-            }
-        } else { 
-            // Если было выполнено -> Снимаем
-            localStorage.removeItem(key); 
-            totalXP -= xp;
-        } 
-        
-        if(totalXP < 0) totalXP = 0; 
-        localStorage.setItem('slv_total_xp', totalXP); 
-        
-        // Небольшая задержка перед перерисовкой, чтобы увидеть анимацию галочки
-        setTimeout(() => renderAll(), 300); 
-    }
+        // FX эффекты
+        if (element) { 
+            const rect = element.getBoundingClientRect(); 
+            const x = rect.left + window.scrollX + 10; 
+            const y = rect.top + window.scrollY; 
+            spawnParticles(x, y, color); 
+            showFloatingXP(x + 20, y - 10, xp, color); 
+        }
+    } else { 
+        // Снимаем
+        localStorage.removeItem(key); 
+        totalXP -= xp;
+    } 
+    
+    if(totalXP < 0) totalXP = 0; 
+    localStorage.setItem('slv_total_xp', totalXP); 
+    
+    // Небольшая задержка перед перерисовкой
+    setTimeout(() => renderAll(), 300); 
+}
 
     function renderDashboard() { 
         const dateStr = new Date().toLocaleDateString('ru-RU'); 
-        document.getElementById('dailyTasks').innerHTML = myTasks.map(task => createHTML(task, dateStr, 'daily')).join(''); 
-        document.getElementById('mindTasks').innerHTML = mindTasks.map(task => createHTML(task, dateStr, 'mind')).join('');
-        document.getElementById('choreTasks').innerHTML = choreTasks.map(task => createOneOffHTML(task, 'chores')).join('');
+        document.getElementById('dailyTasks').innerHTML = myTasks.map(task => createHTML(task, dateStr)).join(''); 
+document.getElementById('mindTasks').innerHTML = mindTasks.map(task => createHTML(task, dateStr)).join('');
+document.getElementById('choreTasks').innerHTML = choreTasks.map(task => createOneOffHTML(task, 'chores')).join('');
         document.getElementById('bogdanTasks').innerHTML = bogdanTasks.map(task => createHTML(task, dateStr, 'bogdan')).join(''); 
     }
 // --- 🧬 НУТРИЦИОЛОГИЯ (ВОССТАНОВЛЕНО) ---
     function renderNutriCard() { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        // Проверяем, есть ли конфиг, если нет - ставим заглушку, чтобы не падало
-        if (typeof nutriConfig === 'undefined') return;
-        
-        document.getElementById('nutriList').innerHTML = nutriConfig.map(cat => { 
-            const goal = cat.calc(userWeight > 0 ? userWeight : 70); 
-            const current = parseFloat(localStorage.getItem(`slv_nutri_${t}_${cat.id}`) || '0'); 
-            const percent = Math.min(100, (current/goal)*100); 
-            return `<div class="nutri-row">
-                <div class="nutri-label"><span style="font-weight:bold; color:${cat.color}">${cat.label}</span><span style="color:#aaa">${current} / ${goal} порц.</span></div>
-                <div class="nutri-bar-bg"><div class="nutri-bar-fill" style="width:${percent}%; background:${cat.color}"></div></div>
-                <div class="nutri-controls"><button class="nutri-btn btn-minus" onclick="addNutri('${cat.id}', -0.5)">-0.5</button><button class="nutri-btn" onclick="addNutri('${cat.id}', 0.5)">+0.5</button><button class="nutri-btn" onclick="addNutri('${cat.id}', 1)">+1.0</button></div>
-            </div>`; 
-        }).join(''); 
-    }
+    const t = new Date().toLocaleDateString('ru-RU'); 
+    // Защита: если конфиг пропал, восстанавливаем
+    if (typeof nutriConfig === 'undefined' || !nutriConfig) return;
+    
+    const listContainer = document.getElementById('nutriList');
+    if (!listContainer) return;
 
-    function addNutri(catId, amount) { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        const key = `slv_nutri_${t}_${catId}`; 
-        let current = parseFloat(localStorage.getItem(key) || '0'); 
-        if (current + amount < 0) return; 
-        current += amount; 
-        localStorage.setItem(key, current); 
-        totalXP += (amount * 2); 
-        if (totalXP < 0) totalXP = 0; 
-        localStorage.setItem('slv_total_xp', totalXP); 
-        renderAll(); 
-    }
+    listContainer.innerHTML = nutriConfig.map(cat => { 
+        const goal = cat.calc(userWeight > 0 ? userWeight : 70); 
+        const current = parseFloat(localStorage.getItem(`slv_nutri_${t}_${cat.id}`) || '0'); 
+        const percent = goal > 0 ? Math.min(100, (current/goal)*100) : 0; 
+        
+        return `<div class="nutri-row">
+            <div class="nutri-label"><span style="font-weight:bold; color:${cat.color}">${cat.label}</span><span style="color:#aaa">${current} / ${goal} порц.</span></div>
+            <div class="nutri-bar-bg"><div class="nutri-bar-fill" style="width:${percent}%; background:${cat.color}"></div></div>
+            <div class="nutri-controls">
+                <button class="nutri-btn btn-minus" onclick="addNutri('${cat.id}', -0.5)">-0.5</button>
+                <button class="nutri-btn" onclick="addNutri('${cat.id}', 0.5)">+0.5</button>
+                <button class="nutri-btn" onclick="addNutri('${cat.id}', 1)">+1.0</button>
+            </div>
+        </div>`; 
+    }).join(''); 
+}
+
+function addNutri(catId, amount) { 
+    const t = new Date().toLocaleDateString('ru-RU'); 
+    const key = `slv_nutri_${t}_${catId}`; 
+    let current = parseFloat(localStorage.getItem(key) || '0'); 
+    
+    // Логика: не даем уйти в минус
+    if (amount < 0 && current + amount < 0) return;
+    
+    current += amount; 
+    localStorage.setItem(key, current); 
+    
+    // XP (безопасное добавление)
+    if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
+    totalXP += (amount * 2); 
+    if (totalXP < 0) totalXP = 0; 
+    
+    localStorage.setItem('slv_total_xp', totalXP); 
+    renderAll(); 
+}
        
     function createHTML(task, dateStr, type) { 
         const key = `slv_${dateStr}_${task.id}`; 
@@ -648,37 +663,38 @@
     }
 
     // --- 💧 ВОДА ---
-    function renderWaterCard() { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
-        const safeWeight = userWeight > 0 ? userWeight : 70;
-        const g = safeWeight * 30; 
-        
-        const elGoal = document.getElementById('waterGoalDisplay');
-        const elCurr = document.getElementById('waterCurrent');
-        const elBar = document.getElementById('waterBar');
+   function renderWaterCard() { 
+    const t = new Date().toLocaleDateString('ru-RU'); 
+    const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
+    // ИСПРАВЛЕНО: убрал safeWeight
+    const g = userWeight * 30; 
+    
+    const elGoal = document.getElementById('waterGoalDisplay');
+    const elCurr = document.getElementById('waterCurrent');
+    const elBar = document.getElementById('waterBar');
 
-        if(elGoal) elGoal.innerText = `Цель: ${g} мл`; 
-        if(elCurr) elCurr.innerText = c; 
-        if(elBar) elBar.style.width = `${g > 0 ? Math.min(100, (c/g)*100) : 0}%`; 
-    }
-
-    function addWater(a) { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        const k = `slv_water_${t}`; 
-        let c = parseInt(localStorage.getItem(k) || '0'); 
-        
-        if (c + a < 0) return; 
-        c += a; 
-        localStorage.setItem(k, c); 
-        
-        if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
-        totalXP += (a/100); 
-        if(totalXP < 0) totalXP = 0; 
-        
-        localStorage.setItem('slv_total_xp', totalXP); 
-        renderAll(); 
-    }
+    if(elGoal) elGoal.innerText = `Цель: ${g} мл`; 
+    if(elCurr) elCurr.innerText = c; 
+    // ИСПРАВЛЕНО: добавил проверку деления на 0
+    if(elBar) elBar.style.width = `${g > 0 ? Math.min(100, (c/g)*100) : 0}%`; 
+}
+   function addWater(a) { 
+    const t = new Date().toLocaleDateString('ru-RU'); 
+    const k = `slv_water_${t}`; 
+    let c = parseInt(localStorage.getItem(k) || '0'); 
+    
+    if (c + a < 0) return; 
+    c += a; 
+    localStorage.setItem(k, c); 
+    
+    // ИСПРАВЛЕНО: добавил проверку типа
+    if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
+    totalXP += (a/100); 
+    if(totalXP < 0) totalXP = 0; 
+    
+    localStorage.setItem('slv_total_xp', totalXP); 
+    renderAll(); 
+}
 
     // --- 🌬️ ВОЗДУХ ---
     function renderAirCard() { 
@@ -695,49 +711,49 @@
         if(elBar) elBar.style.width = `${Math.min(100, (c/g)*100)}%`; 
     }
 
-    function addAir(a) { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        const k = `slv_air_${t}`; 
-        let c = parseInt(localStorage.getItem(k) || '0'); 
-        
-        if (c + a < 0) return; 
-        c += a; 
-        localStorage.setItem(k, c); 
-        
-        if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
-        const xpToAdd = (a/15) * 5; 
-        totalXP += xpToAdd; 
-        if(totalXP < 0) totalXP = 0; 
-        
-        localStorage.setItem('slv_total_xp', totalXP); 
-        renderAll(); 
-    }
+   function addAir(a) { 
+    const t = new Date().toLocaleDateString('ru-RU'); 
+    const k = `slv_air_${t}`; 
+    let c = parseInt(localStorage.getItem(k) || '0'); 
+    
+    if (c + a < 0) return; 
+    c += a; 
+    localStorage.setItem(k, c); 
+    
+    // ИСПРАВЛЕНО: добавил проверку типа
+    if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
+    const xpToAdd = (a/15) * 5; 
+    totalXP += xpToAdd; 
+    if(totalXP < 0) totalXP = 0; 
+    
+    localStorage.setItem('slv_total_xp', totalXP); 
+    renderAll(); 
+}
 
     // --- 🥋 СПОРТ (С ЗАЩИТОЙ ОТ ПУСТОГО СПИСКА) ---
-    function renderSportCard() { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        const listEl = document.getElementById('sportList');
-        if (!listEl) return;
+   function renderSportCard() { 
+    const t = new Date().toLocaleDateString('ru-RU'); 
+    const listEl = document.getElementById('sportList');
+    if (!listEl) return;
 
-        // Защита: если список пуст, возвращаем стандартные упражнения
-        if (!sportExercises || sportExercises.length === 0) {
-            sportExercises = defaultSport;
-            // Сохраняем восстановленный список, чтобы он не пропадал
-            localStorage.setItem('slv_config_sport', JSON.stringify(sportExercises));
-        }
-
-        listEl.innerHTML = sportExercises.map(ex => { 
-            const c = parseInt(localStorage.getItem(`slv_sport_${t}_${ex.id}`) || '0'); 
-            return `<div class="sport-item">
-                <label style="flex:1">${ex.text}</label>
-                <div class="sport-controls">
-                    <button class="sport-btn" onclick="changeSport('${ex.id}', -10)">-</button>
-                    <input type="number" class="sport-input" value="${c}" onchange="setSportExact('${ex.id}', this.value)">
-                    <button class="sport-btn" onclick="changeSport('${ex.id}', 10)">+</button>
-                </div>
-            </div>`; 
-        }).join(''); 
+    // Защита: если список пуст, возвращаем стандартные упражнения
+    if (!sportExercises || sportExercises.length === 0) {
+        sportExercises = defaultSport;
+        localStorage.setItem('slv_config_sport', JSON.stringify(sportExercises));
     }
+
+    listEl.innerHTML = sportExercises.map(ex => { 
+        const c = parseInt(localStorage.getItem(`slv_sport_${t}_${ex.id}`) || '0'); 
+        return `<div class="sport-item">
+            <label style="flex:1">${ex.text}</label>
+            <div class="sport-controls">
+                <button class="sport-btn" onclick="changeSport('${ex.id}', -10)">-</button>
+                <input type="number" class="sport-input" value="${c}" onchange="setSportExact('${ex.id}', this.value)">
+                <button class="sport-btn" onclick="changeSport('${ex.id}', 10)">+</button>
+            </div>
+        </div>`; 
+    }).join(''); 
+}
 
     function changeSport(id, d) { 
         const t = new Date().toLocaleDateString('ru-RU'); 
@@ -745,25 +761,25 @@
         setSportExact(id, c < 0 ? 0 : c); 
     }
 
-    function setSportExact(id, v) { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        const old = parseInt(localStorage.getItem(`slv_sport_${t}_${id}`) || 0); 
-        const val = parseInt(v); 
-        if(isNaN(val)) return; 
-        
-        // Ищем упражнение в списке
-        const exercise = sportExercises.find(e => e.id === id);
-        const rate = exercise ? exercise.rate : 0.5; // Защита если id не найден
+  function setSportExact(id, v) { 
+    const t = new Date().toLocaleDateString('ru-RU'); 
+    const old = parseInt(localStorage.getItem(`slv_sport_${t}_${id}`) || 0); 
+    const val = parseInt(v); 
+    if(isNaN(val)) return; 
+    
+    // Ищем упражнение в списке
+    const exercise = sportExercises.find(e => e.id === id);
+    const rate = exercise ? exercise.rate : 0.5; // Защита если id не найден
 
-        localStorage.setItem(`slv_sport_${t}_${id}`, val); 
-        
-        if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
-        totalXP += (val - old) * rate; 
-        if(totalXP < 0) totalXP = 0; 
-        
-        localStorage.setItem('slv_total_xp', totalXP); 
-        renderAll(); 
-    }
+    localStorage.setItem(`slv_sport_${t}_${id}`, val); 
+    
+    if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
+    totalXP += (val - old) * rate; 
+    if(totalXP < 0) totalXP = 0; 
+    
+    localStorage.setItem('slv_total_xp', totalXP); 
+    renderAll(); 
+}
     function getEnergyText(val) { if(val<=2) return "🧟 Зомби"; if(val<=4) return "🐢 Вялость"; if(val<=6) return "😐 Норма"; if(val<=8) return "💪 Бодрость"; return "🚀 Ракета"; }
     function updateEnergyUI(val) { energyValue = val; document.getElementById('energyVal').innerText = val; document.getElementById('energyText').innerText = getEnergyText(val); }
     function logEnergy() { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_energy_log_${t}`; let l = JSON.parse(localStorage.getItem(k) || '[]'); l.push({time: new Date().toTimeString().substring(0,5), val: energyValue}); localStorage.setItem(k, JSON.stringify(l)); renderEnergy(); renderAll(); }
@@ -771,32 +787,35 @@
     
     
   // --- 🎡 КОЛЕСО (ИСПРАВЛЕНО) ---
-    function drawWheel() { 
-        const canvas = document.getElementById('fizzWheel'); 
-        if (!canvas) return; // Защита от ошибки, если вкладка скрыта или DOM не готов
-        
-        const ctx = canvas.getContext('2d'); 
-        const width = canvas.width; 
-        const height = canvas.height; 
-        const centerX = width / 2; 
-        const centerY = height / 2; 
-        const radius = width / 2 - 5; 
-        
-        ctx.clearRect(0, 0, width, height); 
-        
-        // Если задачи еще не загрузились, рисуем заглушку
-        if (!fizzTasks || fizzTasks.length === 0) { 
-            ctx.fillStyle = '#333'; 
-            ctx.beginPath(); 
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); 
-            ctx.fill(); 
-            // Пишем текст, что пусто
-            ctx.fillStyle = '#666';
-            ctx.font = "14px Segoe UI";
-            ctx.textAlign = "center";
-            ctx.fillText("Загрузка...", centerX, centerY);
-            return; 
-        } 
+   function drawWheel() { 
+    const canvas = document.getElementById('fizzWheel'); 
+    if (!canvas) return; // Защита от ошибки
+    
+    const ctx = canvas.getContext('2d'); 
+    const width = canvas.width; 
+    const height = canvas.height; 
+    const centerX = width / 2; 
+    const centerY = height / 2; 
+    const radius = width / 2 - 5; 
+    
+    ctx.clearRect(0, 0, width, height); 
+    
+    // Если задачи еще не загрузили, рисуем заглушку
+    if (!fizzTasks || fizzTasks.length === 0) { 
+        ctx.fillStyle = '#333'; 
+        ctx.beginPath(); 
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); 
+        ctx.fill(); 
+        // Пишем текст
+        ctx.fillStyle = '#777';
+        ctx.font = "14px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.fillText("Загрузка...", centerX, centerY);
+        return; 
+    } 
+    
+    // ... остальной код как в slv.html
+}
         
         const step = (2 * Math.PI) / fizzTasks.length; 
         const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E']; 
