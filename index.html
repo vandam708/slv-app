@@ -273,7 +273,7 @@
     <div class="nav"><button class="nav-btn active" onclick="switchTab('dash', this)">🏠</button><button class="nav-btn" onclick="switchTab('bogdan', this)">👦</button><button class="nav-btn" onclick="switchTab('stats', this)">📊</button><button class="nav-btn" onclick="switchTab('editor', this)">🛠</button><button class="nav-btn" onclick="switchTab('masters', this)">👥</button></div>
 
 <script>
-    // --- НАСТРОЙКИ FIREBASE ---
+    // --- FIREBASE CONFIG ---
     const firebaseConfig = {
       apiKey: "AIzaSyAhkOgEtlG1Q2byn2PKB6iCySPqM5XocMY",
       authDomain: "slv-project-a51ff.firebaseapp.com",
@@ -288,14 +288,13 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     
-    // Включаем оффлайн-режим
     db.enablePersistence().catch(err => console.log('Persistence error:', err));
 
     let currentUser = null;
     let headerClicks = 0, headerTimer;
     let fizzTimerInterval = null;
 
-    // --- ПЕРЕХВАТЧИКИ СОХРАНЕНИЯ (СИНХРОНИЗАЦИЯ) ---
+    // --- SYNC INTERCEPTORS ---
     const originalSetItem = localStorage.setItem;
     localStorage.setItem = function(key, value) {
         originalSetItem.apply(this, [key, value]);
@@ -310,11 +309,11 @@
         if (currentUser) {
             db.collection('users').doc(currentUser.uid).update({
                 [key]: firebase.firestore.FieldValue.delete()
-            }).catch(e => {}); // Игнорируем ошибки удаления, если поля уже нет
+            }).catch(e => {}); 
         }
     };
 
-    // --- АВТОРИЗАЦИЯ ---
+    // --- AUTH ---
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
@@ -331,41 +330,26 @@
         auth.signInWithPopup(provider).catch(e => alert("Ошибка: " + e.message));
     }
 
-    // --- УМНАЯ СИНХРОНИЗАЦИЯ ---
+    // --- CORE SYNC ---
     function startCloudSync() {
         db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
-            // ВАЖНО: Если есть "pendingWrites" (ожидающие записи), значит мы только что
-            // что-то нажали. В этом случае НЕ запускаем Чистильщика, чтобы он не удалил
-            // нашу новую галочку до того, как она долетит до сервера.
             const isLocalChange = doc.metadata.hasPendingWrites;
-
             if (doc.exists) {
                 const data = doc.data();
-
-                // 1. ЧИСТИЛЬЩИК (Работает только если нет локальных изменений)
                 if (!isLocalChange) {
-                    Object.keys(localStorage).forEach(key => {
-                        if ((key.startsWith('slv_') || key.startsWith('bogdan_')) && !data.hasOwnProperty(key)) {
-                            originalRemoveItem.apply(localStorage, [key]);
-                        }
-                    });
+                    // Sync Cloud -> Local
+                    for (const [key, value] of Object.entries(data)) {
+                        originalSetItem.apply(localStorage, [key, value]);
+                    }
                 }
-
-                // 2. Обновляем данные из облака
-                for (const [key, value] of Object.entries(data)) {
-                    originalSetItem.apply(localStorage, [key, value]);
-                }
-
-                // 3. Обновляем переменные и экран
                 loadVariables();
-                renderAll();
+                try { renderAll(); } catch(e) { console.error("Render error:", e); }
             } else {
-                // Если новый юзер
                 initDefaults();
             }
         });
         
-        // Запуск таймеров и колеса (один раз)
+        // Init UI components once
         if (!window.appInitialized) {
              drawWheel();
              setInterval(checkReminders, 60000);
@@ -373,7 +357,7 @@
         }
     }
 
-    // --- ПЕРЕМЕННЫЕ И ДАННЫЕ ---
+    // --- DATA & VARS ---
     const xpPerLevel = 150;
     const defaultSLV = [{id: 't1', text: 'Утренняя зарядка', xp: 10},{id: 't2', text: 'Основная работа', xp: 20},{id: 't3', text: 'Программирование', xp: 15},{id: 't7', text: 'Контент', xp: 15}];
     const defaultBogdan = [{id: 'b1', text: 'Спорт / Капоэйра', xp: 15},{id: 'b6', text: 'Шахматы', xp: 10}];
@@ -395,7 +379,6 @@
     let currentKey = null;
 
     function initDefaults() {
-        // Если данных нет совсем, грузим дефолт
         myTasks = defaultSLV; bogdanTasks = defaultBogdan; sportExercises = defaultSport; fizzTasks = defaultFizz; shadowTasks = defaultShadow; soulTasks = defaultSoul;
         renderAll();
     }
@@ -412,9 +395,8 @@
         const savedSoul = localStorage.getItem('slv_config_soul'); soulTasks = savedSoul ? JSON.parse(savedSoul) : defaultSoul;
         const savedWeight = localStorage.getItem('slv_user_weight'); if(savedWeight) userWeight = parseInt(savedWeight); document.getElementById('userWeight').value = userWeight;
         
-        // Сон
         const today = new Date().toLocaleDateString('ru-RU');
-        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`));
+        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`) || 'null');
         if(sleepData) { document.getElementById('sleepStart').value = sleepData.start; document.getElementById('sleepEnd').value = sleepData.end; document.getElementById('sleepResultDisplay').innerText = sleepData.diff; }
     }
 
@@ -442,17 +424,14 @@
         document.body.appendChild(el); setTimeout(() => el.remove(), 1000);
     }
 
-    // --- ОСНОВНАЯ ЛОГИКА ЗАДАЧ (ИСПРАВЛЕНА) ---
+    // --- TASKS LOGIC ---
     function toggleTask(taskId, xp, element, color = '#4CC9F0') { 
         const today = new Date().toLocaleDateString('ru-RU'); 
         const key = `slv_${today}_${taskId}`; 
         
-        // Сначала проверяем состояние
         const isCurrentlyDone = localStorage.getItem(key) === 'true';
 
         if (!isCurrentlyDone) { 
-            // ВЫПОЛНЯЕМ ЗАДАЧУ
-            // 1. Сначала запускаем визуал (пока элементы на месте)
             if (element) { 
                 const rect = element.getBoundingClientRect(); 
                 const x = rect.left + window.scrollX + 10; 
@@ -460,20 +439,14 @@
                 spawnParticles(x, y, color); 
                 showFloatingXP(x + 20, y - 10, xp, color); 
             }
-            
-            // 2. Потом логику
             totalXP += xp;
-            localStorage.setItem(key, 'true'); // Это отправит в облако
+            localStorage.setItem(key, 'true'); 
         } else { 
-            // ОТМЕНЯЕМ ЗАДАЧУ
             totalXP -= xp;
-            localStorage.removeItem(key); // Это удалит из облака
+            localStorage.removeItem(key); 
         } 
-        
         if(totalXP < 0) totalXP = 0; 
         localStorage.setItem('slv_total_xp', totalXP); 
-        
-        // 3. Обновляем интерфейс с небольшой задержкой, чтобы визуал отработал
         setTimeout(() => renderAll(), 100); 
     }
 
@@ -508,15 +481,13 @@
         setTimeout(() => renderAll(), 500);
     }
 
-    // --- ОСТАЛЬНОЙ UI ---
     function updateHeaderUI() { const level = Math.floor(totalXP / xpPerLevel) + 1; const progress = (totalXP % xpPerLevel) / xpPerLevel * 100; document.getElementById('userLevel').innerText = `Уровень ${level}`; document.getElementById('xpText').innerText = `${Math.floor(totalXP)} XP`; document.getElementById('xpBar').style.width = `${progress}%`; }
     function switchTaskTab(tabName, btn) { document.querySelectorAll('.task-list-container').forEach(el => el.classList.remove('active')); document.querySelectorAll('.task-tab-btn').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${tabName}`).classList.add('active'); btn.classList.add('active'); }
     
-    // --- AVATAR ---
     function updateAvatarImage() {
         const today = new Date().toLocaleDateString('ru-RU');
         let rawScore = 0; 
-        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`));
+        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`) || 'null');
         let sleepHours = 0; if (sleepData) sleepHours = parseInt(sleepData.diff);
         if (sleepHours >= 7.5) rawScore += 30; else if (sleepHours >= 6) rawScore += 20; else if (sleepHours >= 4) rawScore += 10;
         const water = parseInt(localStorage.getItem(`slv_water_${today}`) || '0');
@@ -554,13 +525,16 @@
         }
     }
 
-    // --- OTHER HELPERS ---
     function headerClick() { headerClicks++; clearTimeout(headerTimer); if (headerClicks === 3) { openSecret(); headerClicks = 0; } else { headerTimer = setTimeout(() => headerClicks = 0, 500); } }
     function saveWeight(val) { if(val) { userWeight = parseInt(val); localStorage.setItem('slv_user_weight', userWeight); renderAll(); } }
+    
+    // --- FIXED HYDRATION & AIR ---
     function renderWaterCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); const g = userWeight * 30; document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; document.getElementById('waterCurrent').innerText = c; document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
     function addWater(a) { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_water_${t}`; let c = parseInt(localStorage.getItem(k) || '0'); if (c + a < 0) return; c += a; localStorage.setItem(k, c); totalXP += (a/100); if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
+    
     function renderAirCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_air_${t}`) || '0'); const g = 60; document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`; document.getElementById('airCurrent').innerText = c; document.getElementById('airBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
     function addAir(a) { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_air_${t}`; let c = parseInt(localStorage.getItem(k) || '0'); if (c + a < 0) return; c += a; localStorage.setItem(k, c); const xpToAdd = (a/15) * 5; totalXP += xpToAdd; if(totalXP < 0) totalXP = 0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
+    
     function saveSleep() {
         const start = document.getElementById('sleepStart').value; const end = document.getElementById('sleepEnd').value;
         if (!start || !end) { alert("Введите время"); return; }
@@ -579,13 +553,11 @@
     function changeSport(id, d) { const t=new Date().toLocaleDateString('ru-RU'); let c=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0)+d; setSportExact(id, c<0?0:c); }
     function setSportExact(id, v) { const t=new Date().toLocaleDateString('ru-RU'); const old=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0); const val=parseInt(v); if(isNaN(val))return; const rate=sportExercises.find(e=>e.id===id).rate; localStorage.setItem(`slv_sport_${t}_${id}`, val); totalXP+=(val-old)*rate; if(totalXP<0)totalXP=0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
     
-    // --- WHEEL ---
     function drawWheel() { const canvas = document.getElementById('fizzWheel'); if (!canvas) return; const ctx = canvas.getContext('2d'); const width = canvas.width; const height = canvas.height; const centerX = width / 2; const centerY = height / 2; const radius = width / 2 - 5; ctx.clearRect(0, 0, width, height); if (fizzTasks.length === 0) { ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); ctx.fill(); return; } const step = (2 * Math.PI) / fizzTasks.length; const colors = ['#FFB703', '#FB8500', '#FFD166', '#E09F3E']; for (let i = 0; i < fizzTasks.length; i++) { const startAngle = i * step; const endAngle = startAngle + step; ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.arc(centerX, centerY, radius, startAngle, endAngle); ctx.closePath(); ctx.fillStyle = colors[i % colors.length]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#111'; ctx.stroke(); ctx.save(); ctx.translate(centerX, centerY); ctx.rotate(startAngle + step / 2); ctx.textAlign = "right"; ctx.fillStyle = "#000"; ctx.font = "bold 14px Segoe UI"; ctx.fillText(fizzTasks[i].text.substring(0, 12) + (fizzTasks[i].text.length > 12 ? "..." : ""), radius - 10, 5); ctx.restore(); } }
     function startFizzTimer() { const display = document.getElementById('fizzTimerDisplay'); const startBtn = document.getElementById('btnStartTimer'); const doneBtn = document.getElementById('btnFizzDone'); startBtn.style.display = 'none'; display.style.display = 'block'; let timeLeft = 5 * 60; function tick() { const m = Math.floor(timeLeft / 60).toString().padStart(2, '0'); const s = (timeLeft % 60).toString().padStart(2, '0'); display.innerText = `${m}:${s}`; if (timeLeft <= 0) { clearInterval(fizzTimerInterval); display.innerText = "00:00"; display.style.color = "var(--success)"; doneBtn.disabled = false; doneBtn.style.opacity = '1'; doneBtn.style.cursor = 'pointer'; if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } timeLeft--; } tick(); fizzTimerInterval = setInterval(tick, 1000); }
     function spinWheel() { if (fizzTasks.length === 0) { alert("Добавь упражнения в редакторе!"); return; } const wheel = document.getElementById('fizzWheel'); const btn = document.querySelector('.fizz-btn'); btn.disabled = true; const randIndex = Math.floor(Math.random() * fizzTasks.length); currentFizz = fizzTasks[randIndex]; const sliceDeg = 360 / fizzTasks.length; const targetSliceAngle = 270 - (randIndex * sliceDeg) - (sliceDeg / 2); const finalRotation = (5 * 360) + targetSliceAngle; wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)"; wheel.style.transform = `rotate(${finalRotation}deg)`; setTimeout(() => { document.getElementById('fizzName').innerText = currentFizz.text; document.getElementById('fizzXP').innerText = `+${currentFizz.xp} XP`; document.getElementById('fizzResult').style.display = 'block'; const display = document.getElementById('fizzTimerDisplay'); display.style.display = 'none'; display.style.color = 'var(--fizz-color)'; display.innerText = '05:00'; document.getElementById('btnStartTimer').style.display = 'block'; const doneBtn = document.getElementById('btnFizzDone'); doneBtn.disabled = true; doneBtn.style.opacity = '0.5'; doneBtn.style.cursor = 'not-allowed'; btn.disabled = false; }, 4000); }
     function completeFizz() { if(!currentFizz) return; clearInterval(fizzTimerInterval); const btn = document.getElementById('btnFizzDone'); const rect = btn.getBoundingClientRect(); spawnParticles(rect.left + 50, rect.top, 'var(--fizz-color)'); showFloatingXP(rect.left + 50, rect.top - 20, currentFizz.xp, 'var(--fizz-color)'); const t=new Date().toLocaleDateString('ru-RU'); localStorage.setItem(`slv_fizz_${t}_${Date.now()}`, JSON.stringify({text:currentFizz.text, xp:currentFizz.xp})); totalXP+=currentFizz.xp; localStorage.setItem('slv_total_xp', totalXP); setTimeout(() => { document.getElementById('fizzResult').style.display='none'; renderAll(); const wheel = document.getElementById('fizzWheel'); wheel.style.transition = 'none'; wheel.style.transform = 'rotate(0deg)'; }, 500); }
 
-    // --- EDITOR ---
     function addNewTask(){ const n=document.getElementById('newTaskName').value; const x=parseInt(document.getElementById('newTaskXP').value); const t=document.getElementById('targetList').value; if(!n)return; const o={id:'t_'+Date.now(), text:n, xp:x}; if(t==='daily'){ myTasks.push(o); localStorage.setItem('slv_config_tasks',JSON.stringify(myTasks)); } else if(t==='mind') { mindTasks.push(o); localStorage.setItem('slv_config_mind',JSON.stringify(mindTasks)); } else if(t==='chores') { choreTasks.push(o); localStorage.setItem('slv_config_chores',JSON.stringify(choreTasks)); } else if(t==='bogdan') { bogdanTasks.push(o); localStorage.setItem('bogdan_config_tasks',JSON.stringify(bogdanTasks)); } document.getElementById('newTaskName').value = ''; renderAll(); }
     function addNewSport() { const n=document.getElementById('newSportName').value, r=parseFloat(document.getElementById('newSportRate').value); if(!n)return; sportExercises.push({id:'sp_'+Date.now(),text:n,rate:r}); localStorage.setItem('slv_config_sport',JSON.stringify(sportExercises)); renderAll(); }
     function addNewFizz() { const n=document.getElementById('newFizzName').value, x=parseInt(document.getElementById('newFizzXP').value); if(!n)return; fizzTasks.push({id:'fz_'+Date.now(),text:n,xp:x}); localStorage.setItem('slv_config_fizz',JSON.stringify(fizzTasks)); renderAll(); }
@@ -593,7 +565,6 @@
     function editTask(id, type) { let list; if (type==='slv') list=myTasks; else if (type==='bogdan') list=bogdanTasks; else if (type==='sport') list=sportExercises; else if (type==='fizz') list=fizzTasks; const item = list.find(t => t.id === id); if (!item) return; const newName = prompt("Новое название:", item.text); if (newName === null) return; let newVal = prompt("Новое значение:", type === 'sport' ? item.rate : item.xp); if (newVal === null) return; newVal = parseFloat(newVal); if (isNaN(newVal)) return; item.text = newName; if (type === 'sport') item.rate = newVal; else item.xp = newVal; if (type==='slv') localStorage.setItem('slv_config_tasks',JSON.stringify(myTasks)); else if (type==='bogdan') localStorage.setItem('bogdan_config_tasks',JSON.stringify(bogdanTasks)); else if (type==='sport') localStorage.setItem('slv_config_sport',JSON.stringify(sportExercises)); else if (type==='fizz') localStorage.setItem('slv_config_fizz',JSON.stringify(fizzTasks)); renderAll(); }
     function renderEditorList() { const btn=(id,t)=>`<div class="edit-controls"><button class="btn-icon btn-edit" onclick="editTask('${id}','${t}')">✏️</button><button class="btn-icon btn-delete" onclick="deleteTask('${id}','${t}')">✖</button></div>`; document.getElementById('editListSLV').innerHTML=myTasks.map(t=>`<div class="edit-list-item"><span>${t.text} (${t.xp} XP)</span>${btn(t.id,'slv')}</div>`).join(''); document.getElementById('editListBogdan').innerHTML=bogdanTasks.map(t=>`<div class="edit-list-item"><span>${t.text} (${t.xp} XP)</span>${btn(t.id,'bogdan')}</div>`).join(''); document.getElementById('editListSport').innerHTML=sportExercises.map(t=>`<div class="edit-list-item"><span>${t.text} (${t.rate}/раз)</span>${btn(t.id,'sport')}</div>`).join(''); document.getElementById('editListFizz').innerHTML=fizzTasks.map(t=>`<div class="edit-list-item"><span>${t.text} (${t.xp} XP)</span>${btn(t.id,'fizz')}</div>`).join(''); document.getElementById('editListMind').innerHTML=mindTasks.map(t=>`<div class="edit-list-item"><span>${t.text} (${t.xp} XP)</span>${btn(t.id,'mind')}</div>`).join(''); document.getElementById('editListChores').innerHTML=choreTasks.map(t=>`<div class="edit-list-item"><span>${t.text} (${t.xp} XP)</span>${btn(t.id,'chores')}</div>`).join(''); }
 
-    // --- SECRET & CRYPTO ---
     function openSecret() { document.querySelectorAll('.screen').forEach(el => el.classList.remove('active')); document.getElementById('screen-secret').classList.add('active'); document.getElementById('vault-door').style.display = 'block'; document.getElementById('vault-content').style.display = 'none'; document.getElementById('vaultPass').value = ''; }
     function attemptLogin() { const pass = document.getElementById('vaultPass').value; if(!pass) return; try { const encryptedNotes = localStorage.getItem('slv_secret_notes_enc'); if (!encryptedNotes) { currentKey = pass; secretNotes = []; unlockVaultUI(); } else { const bytes = CryptoJS.AES.decrypt(encryptedNotes, pass); const decryptedData = bytes.toString(CryptoJS.enc.Utf8); if (decryptedData) { secretNotes = JSON.parse(decryptedData); currentKey = pass; unlockVaultUI(); } else { alert("Неверный пароль!"); } } } catch (e) { alert("Ошибка входа!"); } }
     function unlockVaultUI() { document.getElementById('vault-door').style.display = 'none'; document.getElementById('vault-content').style.display = 'block'; renderSecretScreen(); }
@@ -609,14 +580,12 @@
     function renderSecretScreen() { document.getElementById('shadowList').innerHTML = shadowTasks.map(t => { const key = `slv_secret_${new Date().toLocaleDateString('ru-RU')}_${t.id}`; const isDone = localStorage.getItem(key) === 'true'; return `<div style="display:flex;align-items:center;justify-content:space-between;background:#222;padding:10px;margin-bottom:5px;border-radius:5px;"><div style="display:flex;align-items:center;"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleSecretTask('${t.id}', ${t.xp})" style="width:20px;height:20px;margin-right:10px;accent-color:var(--shadow-color);"><span style="color:${isDone ? '#666' : 'white'};text-decoration:${isDone ? 'line-through' : 'none'}">${t.text}</span></div><button onclick="deleteSecretTask('${t.id}', 'shadow')" style="background:none;border:none;color:#666;cursor:pointer;">✖</button></div>`; }).join(''); document.getElementById('soulList').innerHTML = soulTasks.map(t => { const key = `slv_secret_${new Date().toLocaleDateString('ru-RU')}_${t.id}`; const isDone = localStorage.getItem(key) === 'true'; return `<div style="display:flex;align-items:center;justify-content:space-between;background:#222;padding:10px;margin-bottom:5px;border-radius:5px;"><div style="display:flex;align-items:center;"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleSecretTask('${t.id}', ${t.xp})" style="width:20px;height:20px;margin-right:10px;accent-color:var(--soul-color);"><span style="color:${isDone ? '#666' : 'white'};text-decoration:${isDone ? 'line-through' : 'none'}">${t.text}</span></div><button onclick="deleteSecretTask('${t.id}', 'soul')" style="background:none;border:none;color:#666;cursor:pointer;">✖</button></div>`; }).join(''); document.getElementById('secretNotesList').innerHTML = secretNotes.map(n => `<div class="note-item"><div class="note-header" onclick="toggleNoteBody('${n.id}')"><div><span id="note_arrow_${n.id}" class="note-arrow">▼</span><span class="note-title-text">${n.title || "Заметка"}</span><span class="note-date">${n.date}</span></div><button class="note-delete" onclick="event.stopPropagation(); deleteSecretNote('${n.id}')">✖</button></div><div id="note_body_${n.id}" class="note-body">${n.text}</div></div>`).join(''); const streaks = calculateStreaks(); document.getElementById('currentStreak').innerText = streaks.current; document.getElementById('bestStreak').innerText = streaks.best; setTimeout(renderSecretChart, 100); }
     function renderSecretChart() { const ctx = document.getElementById('secretChart'); if(!ctx) return; const labels = [], soulData = [], shadowData = []; for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const dateStr = d.toLocaleDateString('ru-RU'); labels.push(dateStr.slice(0,5)); let sVal = 0, shVal = 0; soulTasks.forEach(t => { if(localStorage.getItem(`slv_secret_${dateStr}_${t.id}`)==='true') sVal+=t.xp; }); shadowTasks.forEach(t => { if(localStorage.getItem(`slv_secret_${dateStr}_${t.id}`)==='true') shVal+=t.xp; }); soulData.push(sVal); shadowData.push(shVal); } if (secretChartInstance) secretChartInstance.destroy(); secretChartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [ { label: 'Душа', data: soulData, backgroundColor: '#E0AAFF' }, { label: 'Аскеза', data: shadowData, backgroundColor: '#6C757D' } ] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#333' } }, x: { grid: { display: false } } } } }); }
 
-    // --- IMPORT/EXPORT ---
     function importData(i) { const f = i.files[0]; if(!f) return; const r = new FileReader(); r.onload = function(e) { try { const d = JSON.parse(e.target.result); for(let k in d) localStorage.setItem(k, d[k]); alert('Данные перенесены и отправлены в облако!'); location.reload(); } catch(e) { alert('Ошибка файла'); } }; r.readAsText(f); }
     
-    // --- STATISTICS ---
     function renderHistory() { const dateStr = historyDate.toLocaleDateString('ru-RU'); const yyyy = historyDate.getFullYear(); const mm = String(historyDate.getMonth() + 1).padStart(2, '0'); const dd = String(historyDate.getDate()).padStart(2, '0'); const dInput = document.getElementById('historyDateInput'); if(dInput) dInput.value = `${yyyy}-${mm}-${dd}`; let dayXP = 0; let slvH = '', bogdanH = '', sportH = '', fizzH = '', waterH = '', energyH = '', sleepH = '', airH = '';
         const oneOffLog = JSON.parse(localStorage.getItem(`slv_oneoff_log_${dateStr}`) || '[]');
         oneOffLog.forEach(item => { dayXP += item.xp; const icon = item.type === 'mind' ? '👁️' : '🧹'; const color = item.type === 'mind' ? 'var(--soul-color)' : 'var(--danger)'; slvH += `<div class="task-item completed" style="padding:8px; margin-bottom:6px;"><span style="color:${color};">${icon}</span> <label style="margin-left:10px;">${item.text}</label> <span style="color:var(--primary);">+${item.xp}</span></div>`; });
-        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${dateStr}`)); if(sleepData) { sleepH = `<div class="task-item completed" style="padding:8px;margin-bottom:6px;"><span style="color:var(--sleep-color);">💤</span> <label style="margin-left:10px;">Сон: ${sleepData.diff}</label></div>`; }
+        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${dateStr}`) || 'null'); if(sleepData) { sleepH = `<div class="task-item completed" style="padding:8px;margin-bottom:6px;"><span style="color:var(--sleep-color);">💤</span> <label style="margin-left:10px;">Сон: ${sleepData.diff}</label></div>`; }
         const airVal = parseInt(localStorage.getItem(`slv_air_${dateStr}`) || '0'); if(airVal>0) { const earned = (airVal/15)*5; dayXP += earned; airH = `<div class="task-item completed" style="padding:8px;margin-bottom:6px;"><span style="color:var(--air-color);">🌬️</span> <label style="margin-left:10px;">Воздух: ${airVal} мин</label> <span style="color:var(--primary);">+${Math.floor(earned)}</span></div>`; }
         myTasks.forEach(t => { if(localStorage.getItem(`slv_${dateStr}_${t.id}`) === 'true') { dayXP += t.xp; slvH += histItem(t.text, t.xp); }});
         bogdanTasks.forEach(t => { if(localStorage.getItem(`slv_${dateStr}_${t.id}`) === 'true') { dayXP += t.xp; bogdanH += histItem(t.text, t.xp); }});
@@ -656,7 +625,3 @@
 </script>
 </body>
 </html>
-
-
-
-
