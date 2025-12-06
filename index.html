@@ -386,21 +386,46 @@
         renderAll();
     }
 
+  // --- 🛡️ НОВАЯ ЗАЩИЩЕННАЯ ЗАГРУЗКА ---
+    function safeParse(key, defaultVal) {
+        try {
+            const item = localStorage.getItem(key);
+            if (!item) return defaultVal;
+            const parsed = JSON.parse(item);
+            // Если ждем массив, а там не массив — возвращаем стандартное
+            if (Array.isArray(defaultVal) && !Array.isArray(parsed)) return defaultVal;
+            return parsed;
+        } catch (e) {
+            return defaultVal; // Если ошибка — возвращаем стандартное
+        }
+    }
+
     function loadVariables() {
-        const savedXP = localStorage.getItem('slv_total_xp'); if(savedXP) totalXP = parseInt(savedXP);
-        const savedSLV = localStorage.getItem('slv_config_tasks'); myTasks = savedSLV ? JSON.parse(savedSLV) : defaultSLV;
-        const savedMind = localStorage.getItem('slv_config_mind'); mindTasks = savedMind ? JSON.parse(savedMind) : [];
-        const savedChores = localStorage.getItem('slv_config_chores'); choreTasks = savedChores ? JSON.parse(savedChores) : [];
-        const savedBogdan = localStorage.getItem('bogdan_config_tasks'); bogdanTasks = savedBogdan ? JSON.parse(savedBogdan) : defaultBogdan;
-        const savedSport = localStorage.getItem('slv_config_sport'); sportExercises = savedSport ? JSON.parse(savedSport) : defaultSport;
-        const savedFizz = localStorage.getItem('slv_config_fizz'); fizzTasks = savedFizz ? JSON.parse(savedFizz) : defaultFizz;
-        const savedShadow = localStorage.getItem('slv_config_shadow'); shadowTasks = savedShadow ? JSON.parse(savedShadow) : defaultShadow;
-        const savedSoul = localStorage.getItem('slv_config_soul'); soulTasks = savedSoul ? JSON.parse(savedSoul) : defaultSoul;
-        const savedWeight = localStorage.getItem('slv_user_weight'); if(savedWeight) userWeight = parseInt(savedWeight); document.getElementById('userWeight').value = userWeight;
+        const savedXP = localStorage.getItem('slv_total_xp'); 
+        totalXP = savedXP ? parseInt(savedXP) : 0;
+        if (isNaN(totalXP)) totalXP = 0;
+
+        // Загружаем безопасно (если данные битые, возьмем стандартные)
+        myTasks = safeParse('slv_config_tasks', defaultSLV);
+        mindTasks = safeParse('slv_config_mind', []);
+        choreTasks = safeParse('slv_config_chores', []);
+        bogdanTasks = safeParse('bogdan_config_tasks', defaultBogdan);
+        sportExercises = safeParse('slv_config_sport', defaultSport);
+        fizzTasks = safeParse('slv_config_fizz', defaultFizz);
+        shadowTasks = safeParse('slv_config_shadow', defaultShadow);
+        soulTasks = safeParse('slv_config_soul', defaultSoul);
+
+        const savedWeight = localStorage.getItem('slv_user_weight');
+        userWeight = savedWeight ? parseInt(savedWeight) : 70;
+        document.getElementById('userWeight').value = userWeight;
         
         const today = new Date().toLocaleDateString('ru-RU');
-        const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`) || 'null');
-        if(sleepData) { document.getElementById('sleepStart').value = sleepData.start; document.getElementById('sleepEnd').value = sleepData.end; document.getElementById('sleepResultDisplay').innerText = sleepData.diff; }
+        const sleepData = safeParse(`slv_sleep_${today}`, null);
+        if(sleepData) { 
+            document.getElementById('sleepStart').value = sleepData.start; 
+            document.getElementById('sleepEnd').value = sleepData.end; 
+            document.getElementById('sleepResultDisplay').innerText = sleepData.diff; 
+        }
     }
 
     // --- UI ACCORDIONS ---
@@ -728,7 +753,55 @@
     function histItem(text, xp) { return `<div class="task-item completed" style="padding:8px; margin-bottom:6px;"><span style="color:var(--success);">✔</span> <label style="margin-left:10px;">${text}</label> <span style="color:var(--primary);">+${xp}</span></div>`; }
     function changeHistoryDate(d) { historyDate.setDate(historyDate.getDate()+d); renderHistory(); }
     function jumpToDate(v) { if(v) { historyDate=new Date(v); renderHistory(); } }
-    function calcDailyXP(dateStr) { let dXP = 0; [...myTasks, ...bogdanTasks].forEach(t => { if(localStorage.getItem(`slv_${dateStr}_${t.id}`) === 'true') dXP += (t.xp || 10); }); const w = parseInt(localStorage.getItem(`slv_water_${dateStr}`) || '0'); dXP += (w / 100); const a = parseInt(localStorage.getItem(`slv_air_${dateStr}`) || '0'); dXP += ((a / 15) * 5); sportExercises.forEach(s => { const c = parseInt(localStorage.getItem(`slv_sport_${dateStr}_${s.id}`) || '0'); if(c > 0) dXP += (c * s.rate); }); for(let i=0; i<localStorage.length; i++) { const key = localStorage.key(i); if(key.startsWith(`slv_fizz_${dateStr}_`)) { const data = JSON.parse(localStorage.getItem(key)); dXP += (data.xp || 5); } } nutriConfig.forEach(cat => { const val = parseFloat(localStorage.getItem(`slv_nutri_${dateStr}_${cat.id}`) || '0'); dXP += (val * 2); }); if (localStorage.getItem(`slv_sleep_${dateStr}`)) dXP += 10; const oneOffLog = JSON.parse(localStorage.getItem(`slv_oneoff_log_${dateStr}`) || '[]'); oneOffLog.forEach(item => { dXP += item.xp; }); return dXP; }
+// --- 🛡️ ЗАЩИЩЕННЫЙ РАСЧЕТ ОПЫТА ---
+    function calcDailyXP(dateStr) {
+        let dXP = 0;
+        
+        // Объединяем задачи, но проверяем, что это массивы
+        const safeTasks = (Array.isArray(myTasks) ? myTasks : []).concat(Array.isArray(bogdanTasks) ? bogdanTasks : []);
+        
+        safeTasks.forEach(t => {
+            if(localStorage.getItem(`slv_${dateStr}_${t.id}`) === 'true') dXP += (t.xp || 10);
+        });
+        
+        const w = parseInt(localStorage.getItem(`slv_water_${dateStr}`) || '0');
+        dXP += (w / 100);
+        
+        const a = parseInt(localStorage.getItem(`slv_air_${dateStr}`) || '0');
+        dXP += ((a / 15) * 5);
+        
+        if (Array.isArray(sportExercises)) {
+            sportExercises.forEach(s => {
+                const c = parseInt(localStorage.getItem(`slv_sport_${dateStr}_${s.id}`) || '0');
+                if(c > 0) dXP += (c * (s.rate || 1));
+            });
+        }
+        
+        // Безопасный перебор ключей для разминки
+        for(let i=0; i<localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if(key && key.startsWith(`slv_fizz_${dateStr}_`)) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    dXP += (data.xp || 5);
+                } catch(e) {}
+            }
+        }
+        
+        if (Array.isArray(nutriConfig)) {
+            nutriConfig.forEach(cat => {
+                const val = parseFloat(localStorage.getItem(`slv_nutri_${dateStr}_${cat.id}`) || '0');
+                dXP += (val * 2);
+            });
+        }
+        
+        if (localStorage.getItem(`slv_sleep_${dateStr}`)) dXP += 10;
+        
+        const oneOffLog = safeParse(`slv_oneoff_log_${dateStr}`, []);
+        oneOffLog.forEach(item => { dXP += (item.xp || 0); });
+
+        return dXP;
+    }
     function updateComparison() { const today = new Date(); const yest = new Date(); yest.setDate(yest.getDate() - 1); const tStr = today.toLocaleDateString('ru-RU'); const yStr = yest.toLocaleDateString('ru-RU'); const xpToday = calcDailyXP(tStr); const xpYest = calcDailyXP(yStr); const elVal = document.getElementById('compVal'); const elTxt = document.getElementById('compText'); if (!elVal) return; if (xpYest === 0) { if (xpToday > 0) { elVal.innerText = "🚀 СТАРТ!"; elVal.style.color = "var(--success)"; elTxt.innerText = "Вчера активности не было"; } else { elVal.innerText = "😴 Zzz..."; elVal.style.color = "#666"; elTxt.innerText = "Пока нет данных для сравнения"; } } else { const diff = xpToday - xpYest; const percent = ((diff / xpYest) * 100).toFixed(1); if (diff > 0) { elVal.innerText = `+${percent}% 📈`; elVal.style.color = "var(--success)"; elTxt.innerText = `Ты лучше, чем вчера на ${Math.floor(diff)} XP`; } else if (diff < 0) { elVal.innerText = `${percent}% 📉`; elVal.style.color = "var(--danger)"; elTxt.innerText = `Отстаешь от вчерашнего на ${Math.floor(Math.abs(diff))} XP`; } else { elVal.innerText = "= 0%"; elVal.style.color = "var(--warning)"; elTxt.innerText = "Идешь ровно в графике вчерашнего дня"; } } }
     function getChartData(period) { const dailyData = {}; const taskMap = {}; [...myTasks, ...bogdanTasks].forEach(t => taskMap[t.id] = t.xp); for(let i=0; i<localStorage.length; i++) { const key = localStorage.key(i); if(key.startsWith('slv_') && !key.includes('secret') && !key.includes('sleep')) { const parts = key.split('_'); if(parts.length >= 3 && !key.includes('sport') && !key.includes('fizz') && !key.includes('water') && !key.includes('air') && !key.includes('nutri') && !key.includes('energy')) { const date = parts[1]; const id = parts.slice(2).join('_'); if(localStorage.getItem(key) === 'true') dailyData[date] = (dailyData[date] || 0) + (taskMap[id] || 0); } } if(key.startsWith('slv_fizz_')) { const parts = key.split('_'); if(parts.length >= 4) { const date = parts[2]; const data = JSON.parse(localStorage.getItem(key)); dailyData[date] = (dailyData[date] || 0) + data.xp; } } if(key.startsWith('slv_nutri_')) { const parts = key.split('_'); if(parts.length >= 4) { const date = parts[2]; const val = parseFloat(localStorage.getItem(key)); if(val > 0) dailyData[date] = (dailyData[date] || 0) + (val * 2); } } } const sportMap = {}; sportExercises.forEach(s => sportMap[s.id] = s.rate); for(let i=0; i<localStorage.length; i++) { const key = localStorage.key(i); if(key.startsWith('slv_sport_')) { const parts = key.split('_'); if(parts.length >= 4) { const date = parts[2]; const id = parts.slice(3).join('_'); const count = parseInt(localStorage.getItem(key)); if(count > 0) dailyData[date] = (dailyData[date] || 0) + (count * (sportMap[id] || 0)); } } if(key.startsWith('slv_water_')) { const parts = key.split('_'); if(parts.length === 3) { const date = parts[2]; const val = parseInt(localStorage.getItem(key)); if(val>0) dailyData[date] = (dailyData[date] || 0) + (val / 100); } } if(key.startsWith('slv_air_')) { const parts = key.split('_'); if(parts.length === 3) { const date = parts[2]; const val = parseInt(localStorage.getItem(key)); if(val>0) dailyData[date] = (dailyData[date] || 0) + ((val/15)*5); } } } let days = Object.keys(dailyData).sort((a,b) => { const [d1,m1,y1] = a.split('.'); const [d2,m2,y2] = b.split('.'); return new Date(`${y1}-${m1}-${d1}`) - new Date(`${y2}-${m2}-${d2}`); }); const today = new Date(); if(period === 'month') { const cutoff = new Date(); cutoff.setDate(today.getDate() - 30); days = days.filter(d => { const [dd,mm,yyyy]=d.split('.'); return new Date(`${yyyy}-${mm}-${dd}`) >= cutoff; }); } else if(period === 'year') { const cutoff = new Date(); cutoff.setDate(today.getDate() - 365); days = days.filter(d => { const [dd,mm,yyyy]=d.split('.'); return new Date(`${yyyy}-${mm}-${dd}`) >= cutoff; }); } return { labels: days.map(d => d.slice(0,5)), values: days.map(d => dailyData[d]) }; }
     function updateChartPeriod(p, btn) { document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderChart(p); }
