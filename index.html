@@ -376,6 +376,16 @@
             }, { merge: true });
         }
     };
+    // ВОТ ТУТ НОВЫЙ КУСОК:
+    const originalRemoveItem = localStorage.removeItem;
+    localStorage.removeItem = function(key) {
+        originalRemoveItem.apply(this, [key]);
+        if (currentUser) {
+            db.collection('users').doc(currentUser.uid).update({
+                [key]: firebase.firestore.FieldValue.delete()
+            });
+        }
+    };
     // ----------------------
 
     // --- CONFIG & VARIABLES ---
@@ -737,4 +747,5 @@
 </script>
 </body>
 </html>
+
 
