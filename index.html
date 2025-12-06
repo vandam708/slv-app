@@ -475,13 +475,7 @@
         document.getElementById('bogdanTasks').innerHTML = bogdanTasks.map(task => createHTML(task, dateStr, 'bogdan')).join(''); 
     }
 
-    function createHTML(task, dateStr, type) { 
-        const key = `slv_${dateStr}_${task.id}`; 
-        const isDone = localStorage.getItem(key) === 'true'; 
-        let color = 'var(--primary)'; if (type === 'mind') color = 'var(--soul-color)'; if (type === 'bogdan') color = '#00ff9d';
-        return `<div class="task-item ${isDone ? 'completed' : ''}"><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask('${task.id}', ${task.xp}, this, '${color}')"><label>${task.text} <b style="color:${color}; float:right;">+${task.xp}</b></label></div>`; 
-    }
-    
+       
     function createHTML(task, dateStr, type) { 
         const key = `slv_${dateStr}_${task.id}`; 
         const isDone = localStorage.getItem(key) === 'true'; 
@@ -556,17 +550,7 @@
     function saveWeight(val) { if(val) { userWeight = parseInt(val); localStorage.setItem('slv_user_weight', userWeight); renderAll(); } }
     
     // --- FIXED HYDRATION & AIR ---
-    function renderWaterCard() { const t = new Date().toLocaleDateString('ru-RU'); const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); const g = userWeight * 30; document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; document.getElementById('waterCurrent').innerText = c; document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; }
-  // --- 💧 ВОДА И ВОЗДУХ (ИСПРАВЛЕНО) ---
-    function renderWaterCard() { 
-        const t = new Date().toLocaleDateString('ru-RU'); 
-        // Обрати внимание: тут обратные кавычки ` `
-        const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
-        const g = userWeight * 30; 
-        document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; 
-        document.getElementById('waterCurrent').innerText = c; 
-        document.getElementById('waterBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
-    }
+   
 
     // --- 💧 ВОДА (ИСПРАВЛЕНО) ---
     function renderWaterCard() { 
