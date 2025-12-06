@@ -408,6 +408,27 @@
         const sleepData = JSON.parse(localStorage.getItem(`slv_sleep_${today}`) || 'null');
         if(sleepData) { document.getElementById('sleepStart').value = sleepData.start; document.getElementById('sleepEnd').value = sleepData.end; document.getElementById('sleepResultDisplay').innerText = sleepData.diff; }
     }
+// --- UI ACCORDIONS (ВЕРНУТЬ ЭТОТ БЛОК) ---
+    function toggleNutri() { 
+        const c = document.getElementById('nutriContent'); 
+        c.classList.toggle('open'); 
+        document.getElementById('nutriArrow').innerText = c.classList.contains('open') ? '▲' : '▼'; 
+    }
+    function toggleNutriHelp() { 
+        const c = document.getElementById('nutriHelpContent'); 
+        c.style.display = (c.style.display === 'block') ? 'none' : 'block'; 
+        document.getElementById('nutriHelpArrow').innerText = (c.style.display === 'block') ? '▲' : '▼'; 
+    }
+    function toggleSport() { 
+        const c = document.getElementById('sportContent'); 
+        c.classList.toggle('open'); 
+        document.getElementById('sportArrow').innerText = c.classList.contains('open') ? '▲' : '▼'; 
+    }
+    function toggleTasks() { 
+        const c = document.getElementById('tasksContent'); 
+        c.classList.toggle('open'); 
+        document.getElementById('tasksArrow').innerText = c.classList.contains('open') ? '▲' : '▼'; 
+    }
 
     function renderAll() {
         updateHeaderUI(); renderDashboard(); renderNutriCard(); renderSportCard(); renderAirCard();
