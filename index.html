@@ -495,7 +495,33 @@
         document.getElementById('choreTasks').innerHTML = choreTasks.map(task => createOneOffHTML(task, 'chores')).join('');
         document.getElementById('bogdanTasks').innerHTML = bogdanTasks.map(task => createHTML(task, dateStr, 'bogdan')).join(''); 
     }
+// --- 🧬 НУТРИЦИОЛОГИЯ (БЫЛО ПРОПУЩЕНО) ---
+    function renderNutriCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        document.getElementById('nutriList').innerHTML = nutriConfig.map(cat => { 
+            const goal = cat.calc(userWeight); 
+            const current = parseFloat(localStorage.getItem(`slv_nutri_${t}_${cat.id}`) || '0'); 
+            const percent = Math.min(100, (current/goal)*100); 
+            return `<div class="nutri-row">
+                <div class="nutri-label"><span style="font-weight:bold; color:${cat.color}">${cat.label}</span><span style="color:#aaa">${current} / ${goal} порц.</span></div>
+                <div class="nutri-bar-bg"><div class="nutri-bar-fill" style="width:${percent}%; background:${cat.color}"></div></div>
+                <div class="nutri-controls"><button class="nutri-btn btn-minus" onclick="addNutri('${cat.id}', -0.5)">-0.5</button><button class="nutri-btn" onclick="addNutri('${cat.id}', 0.5)">+0.5</button><button class="nutri-btn" onclick="addNutri('${cat.id}', 1)">+1.0</button></div>
+            </div>`; 
+        }).join(''); 
+    }
 
+    function addNutri(catId, amount) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const key = `slv_nutri_${t}_${catId}`; 
+        let current = parseFloat(localStorage.getItem(key) || '0'); 
+        if (current + amount < 0) return; 
+        current += amount; 
+        localStorage.setItem(key, current); 
+        totalXP += (amount * 2); 
+        if (totalXP < 0) totalXP = 0; 
+        localStorage.setItem('slv_total_xp', totalXP); 
+        renderAll(); 
+    }
        
     function createHTML(task, dateStr, type) { 
         const key = `slv_${dateStr}_${task.id}`; 
