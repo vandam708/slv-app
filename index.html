@@ -599,101 +599,176 @@
     function headerClick() { headerClicks++; clearTimeout(headerTimer); if (headerClicks === 3) { openSecret(); headerClicks = 0; } else { headerTimer = setTimeout(() => headerClicks = 0, 500); } }
     function saveWeight(val) { if(val) { userWeight = parseInt(val); localStorage.setItem('slv_user_weight', userWeight); renderAll(); } }
     
-    // --- FIXED HYDRATION & AIR ---
-   
+   // --- 🛡️ БЛОК ВОССТАНОВЛЕНИЯ И ЛОГИКИ (ВСТАВИТЬ В КОНЕЦ СКРИПТА) ---
 
-   // --- 💧 ВОДА (ИСПРАВЛЕНО И ЗАЩИЩЕНО) ---
+    // --- 🧬 НУТРИЦИОЛОГИЯ ---
+    function renderNutriCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        // Защита: если конфиг пропал, восстанавливаем
+        if (typeof nutriConfig === 'undefined' || !nutriConfig) return;
+        
+        const listContainer = document.getElementById('nutriList');
+        if (!listContainer) return;
+
+        listContainer.innerHTML = nutriConfig.map(cat => { 
+            const goal = cat.calc(userWeight > 0 ? userWeight : 70); 
+            const current = parseFloat(localStorage.getItem(`slv_nutri_${t}_${cat.id}`) || '0'); 
+            const percent = goal > 0 ? Math.min(100, (current/goal)*100) : 0; 
+            
+            return `<div class="nutri-row">
+                <div class="nutri-label"><span style="font-weight:bold; color:${cat.color}">${cat.label}</span><span style="color:#aaa">${current} / ${goal} порц.</span></div>
+                <div class="nutri-bar-bg"><div class="nutri-bar-fill" style="width:${percent}%; background:${cat.color}"></div></div>
+                <div class="nutri-controls">
+                    <button class="nutri-btn btn-minus" onclick="addNutri('${cat.id}', -0.5)">-0.5</button>
+                    <button class="nutri-btn" onclick="addNutri('${cat.id}', 0.5)">+0.5</button>
+                    <button class="nutri-btn" onclick="addNutri('${cat.id}', 1)">+1.0</button>
+                </div>
+            </div>`; 
+        }).join(''); 
+    }
+
+    function addNutri(catId, amount) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const key = `slv_nutri_${t}_${catId}`; 
+        let current = parseFloat(localStorage.getItem(key) || '0'); 
+        
+        // Логика: не даем уйти в минус, но разрешаем прибавлять
+        if (amount < 0 && current + amount < 0) return;
+        
+        current += amount; 
+        localStorage.setItem(key, current); 
+        
+        // XP (безопасное добавление)
+        if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
+        totalXP += (amount * 2); 
+        if (totalXP < 0) totalXP = 0; 
+        
+        localStorage.setItem('slv_total_xp', totalXP); 
+        renderAll(); 
+    }
+
+    // --- 💧 ВОДА ---
     function renderWaterCard() { 
         const t = new Date().toLocaleDateString('ru-RU'); 
         const c = parseInt(localStorage.getItem(`slv_water_${t}`) || '0'); 
-        // Защита: если вес 0, считаем как 70кг, чтобы шкала не была бесконечной
         const safeWeight = userWeight > 0 ? userWeight : 70;
         const g = safeWeight * 30; 
         
-        document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`; 
-        document.getElementById('waterCurrent').innerText = c; 
-        
-        // Защита от деления на ноль
-        const pct = g > 0 ? Math.min(100, (c/g)*100) : 0;
-        document.getElementById('waterBar').style.width = `${pct}%`; 
+        const elGoal = document.getElementById('waterGoalDisplay');
+        const elCurr = document.getElementById('waterCurrent');
+        const elBar = document.getElementById('waterBar');
+
+        if(elGoal) elGoal.innerText = `Цель: ${g} мл`; 
+        if(elCurr) elCurr.innerText = c; 
+        if(elBar) elBar.style.width = `${g > 0 ? Math.min(100, (c/g)*100) : 0}%`; 
     }
 
     function addWater(a) { 
         const t = new Date().toLocaleDateString('ru-RU'); 
         const k = `slv_water_${t}`; 
         let c = parseInt(localStorage.getItem(k) || '0'); 
+        
         if (c + a < 0) return; 
         c += a; 
         localStorage.setItem(k, c); 
         
-        // Начисление XP
+        if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
         totalXP += (a/100); 
         if(totalXP < 0) totalXP = 0; 
+        
         localStorage.setItem('slv_total_xp', totalXP); 
         renderAll(); 
     }
 
-    // --- 🌬️ ВОЗДУХ (ИСПРАВЛЕНО) ---
+    // --- 🌬️ ВОЗДУХ ---
     function renderAirCard() { 
         const t = new Date().toLocaleDateString('ru-RU'); 
         const c = parseInt(localStorage.getItem(`slv_air_${t}`) || '0'); 
         const g = 60; 
         
-        document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`; 
-        document.getElementById('airCurrent').innerText = c; 
-        document.getElementById('airBar').style.width = `${Math.min(100, (c/g)*100)}%`; 
+        const elGoal = document.getElementById('airGoalDisplay');
+        const elCurr = document.getElementById('airCurrent');
+        const elBar = document.getElementById('airBar');
+
+        if(elGoal) elGoal.innerText = `Цель: ${g} мин`; 
+        if(elCurr) elCurr.innerText = c; 
+        if(elBar) elBar.style.width = `${Math.min(100, (c/g)*100)}%`; 
     }
 
     function addAir(a) { 
         const t = new Date().toLocaleDateString('ru-RU'); 
         const k = `slv_air_${t}`; 
         let c = parseInt(localStorage.getItem(k) || '0'); 
+        
         if (c + a < 0) return; 
         c += a; 
         localStorage.setItem(k, c); 
         
-        // Начисление XP
+        if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
         const xpToAdd = (a/15) * 5; 
         totalXP += xpToAdd; 
         if(totalXP < 0) totalXP = 0; 
+        
         localStorage.setItem('slv_total_xp', totalXP); 
         renderAll(); 
     }
 
-    function saveSleep() {
-        const start = document.getElementById('sleepStart').value;
-        const end = document.getElementById('sleepEnd').value;
-        if (!start || !end) { alert("Введите время"); return; }
-        
-        const startDate = new Date(`2000-01-01T${start}`); 
-        let endDate = new Date(`2000-01-01T${end}`); 
-        if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
-        
-        const diffMs = endDate - startDate; 
-        const hours = Math.floor(diffMs / 3600000); 
-        const minutes = Math.floor((diffMs % 3600000) / 60000); 
-        const diffText = `${hours} ч ${minutes} мин`;
-        
-        document.getElementById('sleepResultDisplay').innerText = diffText;
-        const today = new Date().toLocaleDateString('ru-RU'); 
-        const key = `slv_sleep_${today}`;
-        
-        if (!localStorage.getItem(key)) { 
-            totalXP += 10; 
-            localStorage.setItem('slv_total_xp', totalXP); 
-            updateHeaderUI(); 
+    // --- 🥋 СПОРТ (С ЗАЩИТОЙ ОТ ПУСТОГО СПИСКА) ---
+    function renderSportCard() { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const listEl = document.getElementById('sportList');
+        if (!listEl) return;
+
+        // Защита: если список пуст, возвращаем стандартные упражнения
+        if (!sportExercises || sportExercises.length === 0) {
+            sportExercises = defaultSport;
+            // Сохраняем восстановленный список, чтобы он не пропадал
+            localStorage.setItem('slv_config_sport', JSON.stringify(sportExercises));
         }
-        localStorage.setItem(key, JSON.stringify({start: start, end: end, diff: diffText})); 
-        alert(`Сон сохранен: ${diffText}`); 
+
+        listEl.innerHTML = sportExercises.map(ex => { 
+            const c = parseInt(localStorage.getItem(`slv_sport_${t}_${ex.id}`) || '0'); 
+            return `<div class="sport-item">
+                <label style="flex:1">${ex.text}</label>
+                <div class="sport-controls">
+                    <button class="sport-btn" onclick="changeSport('${ex.id}', -10)">-</button>
+                    <input type="number" class="sport-input" value="${c}" onchange="setSportExact('${ex.id}', this.value)">
+                    <button class="sport-btn" onclick="changeSport('${ex.id}', 10)">+</button>
+                </div>
+            </div>`; 
+        }).join(''); 
+    }
+
+    function changeSport(id, d) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        let c = parseInt(localStorage.getItem(`slv_sport_${t}_${id}`) || 0) + d; 
+        setSportExact(id, c < 0 ? 0 : c); 
+    }
+
+    function setSportExact(id, v) { 
+        const t = new Date().toLocaleDateString('ru-RU'); 
+        const old = parseInt(localStorage.getItem(`slv_sport_${t}_${id}`) || 0); 
+        const val = parseInt(v); 
+        if(isNaN(val)) return; 
+        
+        // Ищем упражнение в списке
+        const exercise = sportExercises.find(e => e.id === id);
+        const rate = exercise ? exercise.rate : 0.5; // Защита если id не найден
+
+        localStorage.setItem(`slv_sport_${t}_${id}`, val); 
+        
+        if (typeof totalXP !== 'number' || isNaN(totalXP)) totalXP = 0;
+        totalXP += (val - old) * rate; 
+        if(totalXP < 0) totalXP = 0; 
+        
+        localStorage.setItem('slv_total_xp', totalXP); 
         renderAll(); 
     }
     function getEnergyText(val) { if(val<=2) return "🧟 Зомби"; if(val<=4) return "🐢 Вялость"; if(val<=6) return "😐 Норма"; if(val<=8) return "💪 Бодрость"; return "🚀 Ракета"; }
     function updateEnergyUI(val) { energyValue = val; document.getElementById('energyVal').innerText = val; document.getElementById('energyText').innerText = getEnergyText(val); }
     function logEnergy() { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_energy_log_${t}`; let l = JSON.parse(localStorage.getItem(k) || '[]'); l.push({time: new Date().toTimeString().substring(0,5), val: energyValue}); localStorage.setItem(k, JSON.stringify(l)); renderEnergy(); renderAll(); }
     function renderEnergy() { const t = new Date().toLocaleDateString('ru-RU'); const l = JSON.parse(localStorage.getItem(`slv_energy_log_${t}`) || '[]'); if(l.length>0) { document.querySelector('input[type=range]').value = l[l.length-1].val; updateEnergyUI(l[l.length-1].val); } document.getElementById('energyLog').innerHTML = l.map(e => `<div class="energy-log-item"><span>${e.time}</span><span style="color:var(--warning)">${getEnergyText(e.val)}</span></div>`).join(''); }
-    function renderSportCard() { const t = new Date().toLocaleDateString('ru-RU'); document.getElementById('sportList').innerHTML = sportExercises.map(ex => { const c = parseInt(localStorage.getItem(`slv_sport_${t}_${ex.id}`) || '0'); return `<div class="sport-item"><label style="flex:1">${ex.text}</label><div class="sport-controls"><button class="sport-btn" onclick="changeSport('${ex.id}', -10)">-</button><input type="number" class="sport-input" value="${c}" onchange="setSportExact('${ex.id}', this.value)"><button class="sport-btn" onclick="changeSport('${ex.id}', 10)">+</button></div></div>`; }).join(''); }
-    function changeSport(id, d) { const t=new Date().toLocaleDateString('ru-RU'); let c=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0)+d; setSportExact(id, c<0?0:c); }
-    function setSportExact(id, v) { const t=new Date().toLocaleDateString('ru-RU'); const old=parseInt(localStorage.getItem(`slv_sport_${t}_${id}`)||0); const val=parseInt(v); if(isNaN(val))return; const rate=sportExercises.find(e=>e.id===id).rate; localStorage.setItem(`slv_sport_${t}_${id}`, val); totalXP+=(val-old)*rate; if(totalXP<0)totalXP=0; localStorage.setItem('slv_total_xp', totalXP); renderAll(); }
+    
     
   // --- 🎡 КОЛЕСО (ИСПРАВЛЕНО) ---
     function drawWheel() { 
