@@ -321,24 +321,47 @@
     // При старте загружаем всё в dbData.
     // При сохранении пишем в dbData И отправляем в Cloud.
 
-    function loadDataFromCloud() {
-        const docRef = db.collection('users').doc(currentUser.uid);
-        docRef.get().then((doc) => {
+   function loadDataFromCloud() {
+        // МАГИЯ ЗДЕСЬ: Используем .onSnapshot вместо .get
+        // Это заставляет приложение постоянно "слушать" обновления
+        db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
             if (doc.exists) {
-                dbData = doc.data();
-                // Для совместимости со старым кодом заполняем localStorage из облака
-                // (Это "грязный" хак, но самый надежный для миграции)
-                for (const [key, value] of Object.entries(dbData)) {
-                    localStorage.setItem(key, value);
+                const data = doc.data();
+                
+                // 1. Тихо обновляем данные в браузере (не отправляя обратно в облако, чтобы не было петли)
+                for (const [key, value] of Object.entries(data)) {
+                    originalSetItem.apply(localStorage, [key, value]);
                 }
+
+                // 2. Перезагружаем переменные из новых данных
+                // (Копируем логику из init, чтобы обновить массивы задач)
+                const savedXP = localStorage.getItem('slv_total_xp');
+                if(savedXP) totalXP = parseInt(savedXP);
+                
+                const savedSLV = localStorage.getItem('slv_config_tasks'); myTasks = savedSLV ? JSON.parse(savedSLV) : defaultSLV;
+                const savedMind = localStorage.getItem('slv_config_mind'); mindTasks = savedMind ? JSON.parse(savedMind) : [];
+                const savedChores = localStorage.getItem('slv_config_chores'); choreTasks = savedChores ? JSON.parse(savedChores) : [];
+                const savedBogdan = localStorage.getItem('bogdan_config_tasks'); bogdanTasks = savedBogdan ? JSON.parse(savedBogdan) : defaultBogdan;
+                const savedSport = localStorage.getItem('slv_config_sport'); sportExercises = savedSport ? JSON.parse(savedSport) : defaultSport;
+                const savedFizz = localStorage.getItem('slv_config_fizz'); fizzTasks = savedFizz ? JSON.parse(savedFizz) : defaultFizz;
+                const savedShadow = localStorage.getItem('slv_config_shadow'); shadowTasks = savedShadow ? JSON.parse(savedShadow) : defaultShadow;
+                const savedSoul = localStorage.getItem('slv_config_soul'); soulTasks = savedSoul ? JSON.parse(savedSoul) : defaultSoul;
+
+                // 3. Перерисовываем экран
+                renderAll();
+                console.log("♻️ Синхронизация: Данные обновлены!");
             } else {
-                console.log("New user!");
+                console.log("Новый пользователь (или данные пусты)");
+                init(); // Если данных нет, просто запускаем стандартную инициализацию
             }
-            init(); // Запускаем приложение ТОЛЬКО после загрузки данных
-        }).catch((error) => {
-            console.log("Error getting document:", error);
-            init(); // Запускаем даже при ошибке (оффлайн)
         });
+        
+        // Запускаем колесо и таймеры один раз при старте, чтобы они работали
+        if (!window.appInitialized) {
+             drawWheel();
+             setInterval(checkReminders, 60000);
+             window.appInitialized = true;
+        }
     }
 
     // Перехватчик записи: сохраняем и локально, и в облако
@@ -714,3 +737,4 @@
 </script>
 </body>
 </html>
+
