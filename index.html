@@ -995,7 +995,7 @@
         document.getElementById(`tab-${tabName}`).classList.add('active');
         btn.classList.add('active');
     }
-</script>
+
     // --- WATER & WEIGHT ---
     function saveWeight(val) { 
         if(val) { 
@@ -1905,10 +1905,12 @@
             } 
         } 
         
-        const sortedDates = Array.from(successDates).map(d => { 
-            const [dd,mm,yyyy] = d.split('.'); 
-            return new Date(`${yyyy}-${mm}-${dd}`).getTime(); 
-        }).sort((a,b) => a - b); 
+     const sortedDates = Array.from(successDates).map(d => { 
+    const [dd,mm,yyyy] = d.split('.'); 
+    const date = new Date(yyyy, mm - 1, dd); // Месяцы в JS начинаются с 0
+    date.setHours(0,0,0,0);
+    return date.getTime(); 
+}).sort((a,b) => a - b);
         
         if(sortedDates.length === 0) return { current: 0, best: 0 }; 
         
