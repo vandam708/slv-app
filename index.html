@@ -394,13 +394,218 @@
     let dbData = {};
     let isSyncingToCloud = false;
 
-    // --- AUTH LOGIC ---
+ // === НОВАЯ СИСТЕМА СИНХРОНИЗАЦИИ ===
+    const syncManager = {
+        lastSyncTime: {},          // Отслеживаем, когда был последний апдейт каждого ключа
+        isSyncing: false,          // Флаг, чтобы избежать одновременных синхронизаций
+        pendingChanges: {},        // Буфер кешированных значений
+        syncTimeout: null,         // Таймер для пакетной отправки
+        isListenerActive: false,   // Флаг активности слушателя
+
+        // 1️⃣ УМНОЕ СЛИЯНИЕ ДАННЫХ (вместо полной замены)
+        mergeData(cloudData, localData) {
+            const merged = { ...localData };
+
+            for (let key in cloudData) {
+                // === КОНФИГУРАЦИОННЫЕ ДАННЫЕ (общие для всех девайсов) ===
+                if (key.includes('config') || key === 'slv_user_weight' || key.includes('secret')) {
+                    // 📍 Берём облачную версию (это общие настройки)
+                    merged[key] = cloudData[key];
+                }
+                // === ПОЛЬЗОВАТЕЛЬСКИЕ ДАННЫЕ (могут отличаться в зависимости от девайса) ===
+                else {
+                    // 📍 Берём ту версию, которая была обновлена позже
+                    const cloudTime = this.lastSyncTime[key + '_cloud'] || 0;
+                    const localTime = this.lastSyncTime[key + '_local'] || 0;
+
+                    if (cloudTime > localTime) {
+                        // Облако свежее - берём его
+                        merged[key] = cloudData[key];
+                        console.log('✨ Обновлено из облака:', key);
+                    } else {
+                        // Локальное свежее - оставляем локальное
+                        merged[key] = localStorage.getItem(key);
+                        console.log('💾 Оставлено локальное:', key);
+                    }
+                }
+            }
+
+            return merged;
+        },
+
+        // 2️⃣ ПАКЕТНАЯ СИНХРОНИЗАЦИЯ (собираем изменения в пакет)
+        scheduleSyncToCloud(immediate = false) {
+            if (this.isSyncing && !immediate) return;
+
+            // ⏱️ Задержка в 2 сек - для накопления нескольких изменений в один пакет
+            const delay = immediate ? 100 : 2000;
+
+            clearTimeout(this.syncTimeout);
+            this.syncTimeout = setTimeout(() => {
+                this.doSyncToCloud();
+            }, delay);
+        },
+
+        // 3️⃣ РЕАЛЬНАЯ ЗАГРУЗКА НА ОБЛАКО
+        async doSyncToCloud() {
+            if (!currentUser || this.isSyncing) return;
+
+            this.isSyncing = true;
+
+            try {
+                // 🔍 Ищем только ИЗМЕНЁННЫЕ данные
+                const changes = {};
+                let changeCount = 0;
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    const lastKnownValue = this.pendingChanges[key];
+
+                    // Если значение изменилось - добавляем в пакет
+                    if (lastKnownValue !== value) {
+                        changes[key] = value;
+                        this.pendingChanges[key] = value;
+                        this.lastSyncTime[key + '_local'] = Date.now();
+                        changeCount++;
+                    }
+                }
+
+                // Если ничего не изменилось - не отправляем
+                if (changeCount === 0) {
+                    this.isSyncing = false;
+                    return;
+                }
+
+                console.log(`📤 Отправляю ${changeCount} изменений...`);
+
+                // ☁️ Отправляем на Firestore
+                // ВАЖНО: merge: true означает "добавить/обновить", а не "заменить всё"
+                await db.collection('users').doc(currentUser.uid).set({
+                    data: changes,  // Только изменённые данные!
+                    metadata: {
+                        lastSync: new Date(),
+                        deviceId: localStorage.getItem('slv_device_id') || 'unknown'
+                    }
+                }, { merge: true }); // ← КЛЮЧЕВОЕ: merge: true!
+
+                console.log(`✅ Синхронизировано: ${changeCount} элементов`);
+
+            } catch (err) {
+                console.error('❌ Ошибка синхронизации на облако:', err);
+                // Повторим попытку через 3 сек
+                setTimeout(() => this.scheduleSyncToCloud(true), 3000);
+            } finally {
+                this.isSyncing = false;
+            }
+        },
+
+        // 4️⃣ СЛУШАТЕЛЬ ОБЛАКА (обновления в реальном времени)
+        setupCloudListener() {
+            if (!currentUser || this.isListenerActive) return;
+
+            console.log('🔌 Подключаюсь к облаку...');
+            this.isListenerActive = true;
+
+            db.collection('users').doc(currentUser.uid).onSnapshot(
+                (doc) => {
+                    if (!doc.exists) {
+                        console.log('ℹ️ Облачный документ пуст (первая синхронизация)');
+                        return;
+                    }
+
+                    const cloudData = doc.data().data || {};
+                    console.log(`☁️ Получено ${Object.keys(cloudData).length} элементов из облака`);
+
+                    // 🔀 ОБЪЕДИНЯЕМ, не заменяем
+                    for (let key in cloudData) {
+                        const currentValue = localStorage.getItem(key);
+                        const cloudValue = cloudData[key];
+
+                        // Проверяем, есть ли локальные изменения после облачного апдейта
+                        const cloudTime = this.lastSyncTime[key + '_cloud'] || 0;
+                        const localTime = this.lastSyncTime[key + '_local'] || 0;
+
+                        if (cloudTime >= localTime) {
+                            // Облако свежее - обновляем
+                            if (currentValue !== cloudValue) {
+                                localStorage.setItem(key, cloudValue);
+                                this.lastSyncTime[key + '_cloud'] = Date.now();
+                                this.pendingChanges[key] = cloudValue;
+                            }
+                        }
+                        // Иначе оставляем локальное
+                    }
+
+                    renderAll();
+                },
+                (error) => {
+                    console.error('❌ Ошибка облачного слушателя:', error);
+                    this.isListenerActive = false;
+                    // Повторим попытку через 5 сек
+                    setTimeout(() => this.setupCloudListener(), 5000);
+                }
+            );
+        },
+
+        // 5️⃣ ИНИЦИАЛИЗАЦИЯ
+        init() {
+            // Даём каждому устройству уникальный ID
+            if (!localStorage.getItem('slv_device_id')) {
+                const deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('slv_device_id', deviceId);
+                console.log('📱 Вашему устройству дан ID:', deviceId);
+            }
+
+            // Инициализируем кеш текущих значений
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                this.pendingChanges[key] = value;
+            }
+
+            // Подключаемся к облаку
+            this.setupCloudListener();
+        }
+    };
+
+    // === ПЕРЕОПРЕДЕЛЕНИЕ localStorage.setItem ===
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = function (key, value) {
+        // Сначала сохраняем локально
+        originalSetItem.call(this, key, value);
+
+        // Затем уведомляем менеджер синхронизации
+        if (currentUser && !key.includes('temp_')) {
+            syncManager.pendingChanges[key] = value;
+            // Планируем пакетную отправку (2 сек задержка)
+            syncManager.scheduleSyncToCloud(false);
+        }
+    };
+
+    // === СРОЧНАЯ СИНХРОНИЗАЦИЯ при закрытии вкладки ===
+    window.addEventListener('beforeunload', () => {
+        if (currentUser) {
+            syncManager.scheduleSyncToCloud(true); // Отправляем срочно
+        }
+    });
+
+    // === ПЕРИОДИЧЕСКАЯ ПРОВЕРКА (каждые 5 секунд) ===
+    setInterval(() => {
+        if (currentUser && !syncManager.isSyncing) {
+            syncManager.scheduleSyncToCloud(false);
+        }
+    }, 5000);
+
+    // === АВТОРИЗАЦИЯ ===
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
+            syncManager.init();
             loadDataFromCloud();
         } else {
             currentUser = null;
+            syncManager.isListenerActive = false;
         }
     });
 
@@ -411,62 +616,25 @@
         });
     }
 
-    // --- CLOUD SYNC CORE ---
+    // === ЗАГРУЗКА ДАННЫХ С ОБЛАКА ===
     function loadDataFromCloud() {
         if (!currentUser) return;
-        
-        db.collection('users').doc(currentUser.uid).onSnapshot((doc) => {
-            if (doc.exists) {
-                const cloudData = doc.data();
-                if (cloudData && cloudData.data) {
-                    dbData = cloudData.data;
-                    syncCloudToLocal();
-                }
-            }
-        });
-        
+
         if (!window.appInitialized) {
             window.appInitialized = true;
             init();
         }
     }
 
-    function syncCloudToLocal() {
-        if (!dbData || typeof dbData !== 'object') return;
-        for (let key in dbData) {
-            localStorage.setItem(key, dbData[key]);
-        }
-        renderAll();
-    }
-
-    function syncLocalToCloud() {
-        if (!currentUser || isSyncingToCloud) return;
-        isSyncingToCloud = true;
-        
-        dbData = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            dbData[key] = localStorage.getItem(key);
-        }
-        
-        db.collection('users').doc(currentUser.uid).set({
-            data: dbData,
-            lastSync: new Date()
-        }, { merge: true }).then(() => {
-            isSyncingToCloud = false;
-        }).catch(err => {
-            console.error('Sync error:', err);
-            isSyncingToCloud = false;
-        });
-    }
-
-    const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key, value) {
-        originalSetItem.call(this, key, value);
-        if (currentUser) {
-            dbData[key] = value;
-            syncLocalToCloud();
-        }
+    // === ДЛЯ ОТЛАДКИ: Команда в консоли ===
+    // Введи в консоль браузера: showSyncStatus()
+    window.showSyncStatus = function () {
+        console.log('=== СТАТУС СИНХРОНИЗАЦИИ ===');
+        console.log('Пользователь:', currentUser?.email || 'не авторизирован');
+        console.log('Синхронизация идёт:', syncManager.isSyncing);
+        console.log('Ожидающих изменений:', Object.keys(syncManager.pendingChanges).length);
+        console.log('Последняя синхронизация:', syncManager.lastSyncTime);
+        console.log('localStorage элементов:', localStorage.length);
     };
 
     // --- CONFIG & VARIABLES ---
