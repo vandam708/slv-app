@@ -213,6 +213,15 @@
 </head>
 <body>
     <div class="header">
+<div id="auth-section" style="text-align: center; margin-top: 10px;">
+    <button id="loginBtn" onclick="loginWithGoogle()" style="background: var(--primary); color: #000; border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">
+        ☁️ Войти через Google
+    </button>
+    <div id="userInfo" style="display: none; font-size: 0.8em; color: var(--success);">
+        <span id="userEmail"></span> 
+        <button onclick="auth.signOut()" style="background: none; border: 1px solid #555; color: #888; margin-left: 10px; cursor: pointer; border-radius: 3px;">Выйти</button>
+    </div>
+</div>
         <div class="level-info"><span id="userLevel">Уровень 1</span><span id="xpText">0 XP</span></div>
         <div class="xp-bar-container"><div class="xp-bar-fill" id="xpBar"></div></div>
         <div style="text-align: center; margin-top: 5px; font-size: 0.8em; color: #888; cursor: pointer;" onclick="headerClick()" id="appTitle">SLV: Стал Лучше Чем Был Вчера</div>
@@ -598,16 +607,29 @@
     }, 5000);
 
     // === АВТОРИЗАЦИЯ ===
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            currentUser = user;
-            syncManager.init();
-            loadDataFromCloud();
-        } else {
-            currentUser = null;
-            syncManager.isListenerActive = false;
-        }
-    });
+ auth.onAuthStateChanged(user => {
+    const loginBtn = document.getElementById('loginBtn');
+    const userInfo = document.getElementById('userInfo');
+    const userEmail = document.getElementById('userEmail');
+
+    if (user) {
+        currentUser = user;
+        // Показываем email и кнопку выхода
+        if(loginBtn) loginBtn.style.display = 'none';
+        if(userInfo) userInfo.style.display = 'block';
+        if(userEmail) userEmail.innerText = user.email;
+
+        syncManager.init();
+        loadDataFromCloud();
+    } else {
+        currentUser = null;
+        // Показываем кнопку входа
+        if(loginBtn) loginBtn.style.display = 'block';
+        if(userInfo) userInfo.style.display = 'none';
+        
+        syncManager.isListenerActive = false;
+    }
+});
 
     function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
