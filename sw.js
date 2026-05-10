@@ -1,7 +1,10 @@
-const CACHE_NAME = 'slv-pwa-v1';
+const CACHE_NAME = 'slv-pwa-v3';
 const APP_SHELL = [
     './',
     './index.html',
+    './frontend/styles/app.css',
+    './frontend/styles/dashboard.css',
+    './src/firebase/firebase-client.js',
     './manifest.webmanifest',
     './icons/icon-192.svg',
     './icons/icon-512.svg'

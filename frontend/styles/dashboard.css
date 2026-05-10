@@ -1,0 +1,25 @@
+/* Dashboard visual layer.
+   Keep main-screen layout and theme overrides here so app logic can stay in index.html/src. */
+
+#screen-dash {
+    --dash-gap: 15px;
+}
+
+.dash-card {
+    min-width: 0;
+}
+
+/*
+Future dashboard redesign hooks:
+
+.dash-energy-card {}
+.dash-sleep-card {}
+.dash-water-card {}
+.dash-nutri-card {}
+.dash-air-card {}
+.dash-tasks-card {}
+.dash-sport-card {}
+.dash-fizz-card {}
+
+Use these classes for the next visual pass instead of targeting cards by order.
+*/
