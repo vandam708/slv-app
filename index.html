@@ -85,7 +85,7 @@
                 </div>
                 <div class="water-progress-bg">
                     <div class="water-progress-fill" id="waterBar"></div>
-                    <div class="water-text"><span id="waterCurrent">0</span> мл</div>
+                    <div class="water-text"><span id="waterCurrent">0</span></div>
                 </div>
                 <div class="water-controls"><button class="water-btn" onclick="addWater(200)">+200</button><button
                         class="water-btn" onclick="addWater(300)">+300</button><button class="water-btn"
@@ -129,7 +129,7 @@
                 </div>
                 <div class="air-progress-bg">
                     <div class="air-progress-fill" id="airBar"></div>
-                    <div class="air-text"><span id="airCurrent">0</span> мин</div>
+                    <div class="air-text"><span id="airCurrent">0</span></div>
                 </div>
                 <div class="air-controls"><button class="air-btn" onclick="addAir(15)">+15</button><button
                         class="air-btn" onclick="addAir(30)">+30</button><button class="air-btn" onclick="addAir(60)">+1
@@ -817,7 +817,7 @@
             const c = S.getInt ? S.getInt(`slv_water_${t}`, 0) : parseInt(localStorage.getItem(`slv_water_${t}`) || '0');
             const g = userWeight * 30;
             document.getElementById('waterGoalDisplay').innerText = `Цель: ${g} мл`;
-            document.getElementById('waterCurrent').innerText = c;
+            document.getElementById('waterCurrent').innerText = `${c} / ${g} мл`;
             document.getElementById('waterBar').style.width = `${Math.min(100, (c / g) * 100)}%`;
         }
         function addWater(a) {
@@ -836,7 +836,7 @@
             const c = S.getInt ? S.getInt(`slv_air_${t}`, 0) : parseInt(localStorage.getItem(`slv_air_${t}`) || '0');
             const g = 60;
             document.getElementById('airGoalDisplay').innerText = `Цель: ${g} мин`;
-            document.getElementById('airCurrent').innerText = c;
+            document.getElementById('airCurrent').innerText = `${c} / ${g} мин`;
             document.getElementById('airBar').style.width = `${Math.min(100, (c / g) * 100)}%`;
         }
         function addAir(a) {
