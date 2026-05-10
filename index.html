@@ -825,6 +825,7 @@
             const sleepExists = S.getRaw ? S.getRaw(key, null) : localStorage.getItem(key);
             if (!sleepExists) { totalXP = X.add ? X.add(totalXP, 10) : (totalXP + 10); if (S.setNumber) S.setNumber('slv_total_xp', totalXP, 0); else localStorage.setItem('slv_total_xp', totalXP); updateHeaderUI(); }
             if (S.setJson) S.setJson(key, { start: start, end: end, diff: diffText }); else localStorage.setItem(key, JSON.stringify({ start: start, end: end, diff: diffText }));
+            if (sleepPanel) sleepPanel.update({ start, end, diff: diffText });
             alert(`Сон сохранен: ${diffText}`); renderAll();
         }
         function getEnergyText(val) {

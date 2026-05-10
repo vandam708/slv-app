@@ -1,17 +1,422 @@
 /* Dashboard visual layer.
-   Keep main-screen layout and theme overrides here so app logic can stay in index.html/src. */
+   Main-screen layout and theme overrides live here so app logic stays in index.html/src. */
+
+:root {
+    --dash-bg: #0a111b;
+    --dash-panel: rgba(18, 27, 39, 0.94);
+    --dash-panel-2: rgba(29, 37, 50, 0.88);
+    --dash-line: rgba(90, 224, 231, 0.24);
+    --dash-line-warm: rgba(255, 196, 104, 0.42);
+    --dash-text-dim: #9ca8b4;
+}
+
+body {
+    background:
+        linear-gradient(180deg, rgba(7, 11, 17, 0.98), rgba(9, 18, 29, 0.98)),
+        radial-gradient(circle at 30% 0%, rgba(76, 201, 240, 0.13), transparent 36%);
+}
+
+.header {
+    height: 58px;
+    padding: 10px 18px;
+    background:
+        linear-gradient(180deg, rgba(12, 16, 23, 0.98), rgba(7, 10, 14, 0.98)),
+        linear-gradient(90deg, rgba(76, 201, 240, 0.16), transparent 45%, rgba(255, 209, 102, 0.12));
+    border-bottom: 1px solid rgba(76, 201, 240, 0.72);
+    box-shadow: 0 0 18px rgba(76, 201, 240, 0.18);
+}
+
+.level-info {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    color: #eaf7ff;
+    text-transform: uppercase;
+}
+
+.xp-bar-container {
+    width: min(220px, 34vw);
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.content {
+    padding: 14px 16px 82px;
+    background:
+        linear-gradient(rgba(76, 201, 240, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(76, 201, 240, 0.028) 1px, transparent 1px);
+    background-size: 42px 42px;
+}
 
 #screen-dash {
-    --dash-gap: 15px;
+    --dash-gap: 14px;
+    display: none;
+}
+
+#screen-dash.active {
+    display: grid;
+    grid-template-columns: minmax(380px, 1.08fr) minmax(490px, 1.36fr) minmax(520px, 1.52fr);
+    min-height: calc(100vh - 156px);
+    grid-template-rows: minmax(260px, 0.95fr) minmax(300px, 1.1fr) minmax(330px, 1.25fr);
+    grid-template-areas:
+        "energy air tasks"
+        "sleep nutri tasks"
+        "water sport fizz";
+    gap: var(--dash-gap);
+    align-items: stretch;
+}
+
+#screen-dash > h2 {
+    display: none;
 }
 
 .dash-card {
     min-width: 0;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 34%),
+        radial-gradient(circle at 12% 0%, rgba(76, 201, 240, 0.11), transparent 34%),
+        var(--dash-panel);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-left: 3px solid var(--primary);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+        0 14px 28px rgba(0, 0, 0, 0.42),
+        0 0 20px rgba(76, 201, 240, 0.06);
+}
+
+.dash-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: 0.34;
+}
+
+.dash-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.dash-card h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #eaf7ff;
+    text-transform: uppercase;
+}
+
+.dash-energy-card {
+    grid-area: energy;
+    border-left-color: var(--warning);
+}
+
+.dash-air-card {
+    grid-area: air;
+    border-left-color: var(--air-color);
+}
+
+.dash-tasks-card {
+    grid-area: tasks;
+    border-left-color: #9b5cff;
+    min-height: 0;
+}
+
+.dash-nutri-card {
+    grid-area: nutri;
+    border-left-color: var(--success);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.dash-sleep-card {
+    grid-area: sleep;
+    border-left-color: var(--sleep-color);
+    display: grid;
+    grid-template-columns: 186px minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    gap: 6px 16px;
+    align-items: center;
+    min-height: 0;
+}
+
+.dash-water-card {
+    grid-area: water;
+    border-left-color: var(--water-color);
+    align-self: stretch;
+}
+
+.dash-sport-card {
+    grid-area: sport;
+    border-left-color: var(--sport-color);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.dash-fizz-card {
+    grid-area: fizz;
+    border-left-color: var(--fizz-color);
+    align-self: stretch;
+    min-height: 0;
+}
+
+.dash-energy-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto auto;
+    column-gap: 18px;
+}
+
+.dash-energy-card h3 {
+    grid-column: 1 / -1;
+}
+
+.dash-energy-card label {
+    align-self: start;
+    color: #d6e4ef;
+}
+
+.energy-range {
+    align-self: center;
+    accent-color: var(--primary);
+}
+
+.energy-btn {
+    grid-column: 2;
+    align-self: end;
+    min-height: 42px;
+    background: linear-gradient(180deg, rgba(48, 151, 139, 0.82), rgba(30, 93, 92, 0.92));
+    border-color: rgba(90, 255, 229, 0.48);
+    color: #d8fff8;
+    box-shadow: 0 0 16px rgba(6, 214, 160, 0.16);
+}
+
+.energy-log {
+    grid-column: 1 / -1;
+    max-height: 86px;
+    overflow: auto;
+}
+
+.dash-energy-card::after {
+    content: "";
+    position: absolute;
+    left: 44px;
+    top: 92px;
+    width: 132px;
+    height: 132px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, rgba(255, 227, 132, 0.98) 0 8%, rgba(76, 201, 240, 0.96) 11%, rgba(76, 201, 240, 0.12) 38%, transparent 62%),
+        conic-gradient(from 30deg, transparent, rgba(76, 201, 240, 0.8), transparent, rgba(255, 209, 102, 0.8), transparent);
+    filter: drop-shadow(0 0 22px rgba(76, 201, 240, 0.6));
+    opacity: 0.9;
+}
+
+.dash-sleep-card .sleep-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+    margin: 0;
+}
+
+.dash-sleep-card h3 {
+    grid-column: 1 / -1;
+    color: #a9a4ff !important;
+}
+
+.sleep-dial-shell {
+    grid-row: 2 / 4;
+    width: 168px;
+    aspect-ratio: 1;
+    justify-self: center;
+    align-self: center;
+    filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.38));
+}
+
+.sleep-dial {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.sleep-dial::before {
+    content: "";
+    position: absolute;
+    inset: 14%;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(10, 15, 24, 0.16), transparent 34%),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.52), rgba(12, 23, 53, 0.42));
+    border: 10px solid rgba(12, 18, 28, 0.72);
+    box-shadow:
+        inset 0 0 0 2px rgba(255, 255, 255, 0.18),
+        0 0 0 8px rgba(255, 255, 255, 0.08);
+}
+
+.sleep-dial-face {
+    position: absolute;
+    inset: 20%;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    overflow: hidden;
+    box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.22);
+}
+
+.sleep-day-symbol,
+.sleep-night-symbol,
+.sleep-stars {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.sleep-day-symbol {
+    top: 23%;
+    left: 43%;
+    font-size: 1.35rem;
+}
+
+.sleep-night-symbol {
+    bottom: 22%;
+    right: 34%;
+    font-size: 1.45rem;
+    filter: drop-shadow(0 0 8px rgba(100, 220, 255, 0.6));
+}
+
+.sleep-stars {
+    top: 45%;
+    right: 20%;
+    font-size: 0.8rem;
+    color: #ffd166;
+}
+
+.sleep-clock-label {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    color: rgba(232, 238, 248, 0.82);
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.sleep-clock-tick {
+    position: absolute;
+    width: 1px;
+    height: 8px;
+    background: rgba(13, 20, 34, 0.7);
+    transform-origin: 50% 50%;
+    z-index: 3;
+}
+
+.sleep-handle {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 0 3px rgba(60, 70, 110, 0.5), 0 5px 12px rgba(0, 0, 0, 0.35);
+    z-index: 5;
+}
+
+.sleep-handle-start {
+    background: #5ab8dc;
+}
+
+.sleep-handle-end {
+    background: #7569de;
+}
+
+.dash-sleep-card .sleep-field {
+    min-width: 0;
+}
+
+.dash-sleep-card .sleep-footer {
+    grid-column: 2;
+    margin: 0;
+    border-top: 0;
+    padding-top: 0;
+    align-items: center;
+    gap: 10px;
+}
+
+.dash-sleep-card .sleep-result {
+    color: #eaf2ff;
+    font-size: 1.16rem;
+    letter-spacing: 0;
+}
+
+.dash-sleep-card .sleep-save-btn {
+    min-width: 104px;
+    padding: 6px 12px;
+    background: linear-gradient(180deg, rgba(130, 120, 255, 0.86), rgba(66, 81, 190, 0.94));
+    box-shadow: 0 0 16px rgba(130, 120, 255, 0.18);
+}
+
+.dash-water-card,
+.dash-sport-card {
+    min-height: 330px;
+}
+
+.sleep-time-input,
+.editor-input,
+.secret-input,
+.secret-title-input,
+.secret-textarea,
+.date-input {
+    background: rgba(6, 12, 20, 0.82);
+    border-color: rgba(130, 168, 210, 0.28);
+}
+
+.sleep-save-btn,
+.btn-add,
+.btn-save,
+.fizz-btn,
+.fizz-done-btn {
+    border-radius: 7px;
+}
+
+.dash-water-card,
+.dash-air-card {
+    display: flex;
+    flex-direction: column;
 }
 
 .water-progress-bg,
 .air-progress-bg {
-    height: 24px;
+    height: 30px;
+    margin: 12px 0 14px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 8px rgba(0, 0, 0, 0.65);
+}
+
+.water-progress-fill,
+.air-progress-fill {
+    position: relative;
+    z-index: 1;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #4d82ff, #55f0ff);
+    box-shadow: 0 0 16px rgba(76, 201, 240, 0.35);
+}
+
+.air-progress-fill {
+    background: linear-gradient(90deg, #00b4d8, #6fffd9);
 }
 
 .water-text,
@@ -33,27 +438,293 @@
 .air-text span {
     padding: 3px 9px;
     border-radius: 999px;
-    background: rgba(10, 14, 23, 0.5);
+    background: rgba(10, 14, 23, 0.54);
     border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
-.water-progress-fill,
-.air-progress-fill {
-    position: relative;
-    z-index: 1;
+.water-controls,
+.air-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 0;
 }
 
-/*
-Future dashboard redesign hooks:
+.water-controls + .water-controls,
+.air-controls + .air-controls {
+    grid-template-columns: repeat(2, 1fr);
+    margin-top: 8px;
+}
 
-.dash-energy-card {}
-.dash-sleep-card {}
-.dash-water-card {}
-.dash-nutri-card {}
-.dash-air-card {}
-.dash-tasks-card {}
-.dash-sport-card {}
-.dash-fizz-card {}
+.water-btn,
+.air-btn,
+.water-btn-neg,
+.air-btn-neg,
+.nutri-btn,
+.sport-btn {
+    border-radius: 7px;
+    background: rgba(32, 49, 67, 0.84);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
 
-Use these classes for the next visual pass instead of targeting cards by order.
-*/
+.dash-air-card::after {
+    content: "";
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    bottom: 58px;
+    height: 58px;
+    opacity: 0.38;
+    background:
+        linear-gradient(to top, rgba(76, 201, 240, 0.28), transparent 70%),
+        repeating-linear-gradient(90deg, transparent 0 18px, rgba(168, 229, 255, 0.34) 18px 22px, transparent 22px 34px);
+    clip-path: polygon(0 70%, 6% 56%, 10% 65%, 15% 42%, 20% 66%, 27% 36%, 32% 62%, 38% 45%, 45% 70%, 52% 34%, 60% 64%, 68% 48%, 75% 66%, 82% 42%, 89% 68%, 100% 50%, 100% 100%, 0 100%);
+}
+
+.accordion-header {
+    min-height: 26px;
+}
+
+.accordion-content.open {
+    max-height: none;
+}
+
+.dash-nutri-card .accordion-content.open,
+.dash-sport-card .accordion-content.open {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.task-tabs {
+    gap: 8px;
+    margin-bottom: 12px;
+    background: rgba(0, 0, 0, 0.22);
+    padding: 5px;
+    border-radius: 8px;
+}
+
+.task-tab-btn {
+    border-radius: 7px;
+    background: transparent;
+}
+
+.task-tab-btn.active {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.08));
+}
+
+.task-list-container.active {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 22px;
+    max-height: calc(100% - 48px);
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.task-item {
+    margin: 0;
+    min-height: 44px;
+    padding: 9px 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.045));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.22);
+}
+
+.task-item input {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+}
+
+.task-item label {
+    font-size: 0.92rem;
+    color: #e7edf4;
+}
+
+.nutri-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.nutri-label {
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
+.nutri-bar-bg {
+    height: 8px;
+    min-width: 0;
+}
+
+.nutri-controls {
+    margin-top: 0;
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    min-width: max-content;
+}
+
+.nutri-btn {
+    min-width: 42px;
+    padding: 4px 7px;
+}
+
+.nutri-help-header,
+.nutri-help-content {
+    background: rgba(255, 193, 7, 0.08);
+    border-color: rgba(255, 209, 102, 0.24);
+}
+
+.sport-item {
+    position: relative;
+    z-index: 2;
+    min-height: 42px;
+    margin-bottom: 9px;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 194, 102, 0.12);
+}
+
+.sport-input {
+    width: 54px;
+    background: rgba(0, 0, 0, 0.32);
+    border-radius: 7px;
+}
+
+.dash-sport-card::after {
+    content: "";
+    position: absolute;
+    inset: 72px 31% 30px 31%;
+    opacity: 0.16;
+    background:
+        radial-gradient(circle at 50% 13%, rgba(163, 219, 255, 0.9) 0 5%, transparent 7%),
+        linear-gradient(90deg, transparent 44%, rgba(163, 219, 255, 0.62) 44% 56%, transparent 56%),
+        linear-gradient(25deg, transparent 41%, rgba(163, 219, 255, 0.55) 41% 51%, transparent 51%),
+        linear-gradient(-25deg, transparent 41%, rgba(163, 219, 255, 0.55) 41% 51%, transparent 51%);
+    filter: drop-shadow(0 0 14px rgba(76, 201, 240, 0.36));
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dash-sport-card #sportList,
+.dash-sport-card p {
+    position: relative;
+    z-index: 2;
+}
+
+.wheel-wrapper {
+    width: 180px;
+    height: auto;
+    aspect-ratio: 1;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.dash-fizz-card {
+    display: grid;
+    grid-template-columns: 220px minmax(240px, 1fr);
+    grid-template-rows: auto 1fr auto;
+    gap: 12px 18px;
+    padding-bottom: 18px;
+}
+
+.dash-fizz-card h3 {
+    grid-column: 1 / -1;
+}
+
+.dash-fizz-card .wheel-wrapper {
+    grid-row: 2 / 4;
+    align-self: start;
+}
+
+.dash-fizz-card > .fizz-btn {
+    align-self: end;
+    justify-self: stretch;
+    min-height: 48px;
+}
+
+.fizz-result {
+    align-self: start;
+    margin-top: 0;
+    padding: 14px;
+    min-height: 120px;
+    max-height: 170px;
+    overflow: auto;
+    border: 1px solid rgba(76, 201, 240, 0.24);
+    border-radius: 10px;
+    background: rgba(14, 41, 48, 0.7);
+    box-shadow: inset 0 0 24px rgba(76, 201, 240, 0.08);
+}
+
+.nav {
+    height: 58px;
+    padding: 8px 0;
+    background: rgba(9, 13, 20, 0.96);
+    border-top: 1px solid rgba(76, 201, 240, 0.2);
+}
+
+.nav-btn {
+    min-width: 64px;
+    border-radius: 9px;
+}
+
+.nav-btn.active {
+    color: var(--warning);
+    background: rgba(255, 209, 102, 0.18);
+}
+
+@media (max-width: 1280px) {
+    #screen-dash.active {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto;
+        grid-template-areas:
+            "energy air"
+            "sleep sleep"
+            "water tasks"
+            "nutri tasks"
+            "sport fizz"
+            "fizz fizz";
+    }
+}
+
+@media (max-width: 760px) {
+    .content {
+        padding: 12px 10px 78px;
+    }
+
+    #screen-dash.active {
+        display: block;
+    }
+
+    .dash-card {
+        margin-bottom: 12px;
+    }
+
+    .task-list-container.active,
+    .dash-fizz-card {
+        display: block;
+    }
+
+    .dash-sleep-card {
+        display: block;
+    }
+
+    .sleep-dial-shell {
+        margin: 8px auto 14px;
+    }
+
+    .wheel-wrapper {
+        width: 280px;
+        max-width: 100%;
+        margin: 10px auto;
+    }
+}
