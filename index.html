@@ -2205,7 +2205,7 @@
             const randIndex = Math.floor(Math.random() * fizzTasks.length);
             currentFizz = fizzTasks[randIndex];
             const sliceDeg = 360 / fizzTasks.length;
-            const targetSliceAngle = 270 - (randIndex * sliceDeg) - (sliceDeg / 2);
+            const targetSliceAngle = -(randIndex * sliceDeg + sliceDeg / 2);
             const finalRotation = (5 * 360) + targetSliceAngle;
             wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
             wheel.style.transform = `rotate(${finalRotation}deg)`;
