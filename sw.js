@@ -1,9 +1,16 @@
-const CACHE_NAME = 'slv-pwa-v3';
+const CACHE_NAME = 'slv-pwa-v4';
 const APP_SHELL = [
     './',
     './index.html',
     './frontend/styles/app.css',
     './frontend/styles/dashboard.css',
+    './frontend/components/energy-panel.js',
+    './frontend/components/sleep-panel.js',
+    './frontend/components/water-tank.js',
+    './frontend/components/air-panel.js',
+    './frontend/components/nutrition-panel.js',
+    './frontend/components/sport-panel.js',
+    './frontend/components/fizz-wheel.js',
     './src/firebase/firebase-client.js',
     './manifest.webmanifest',
     './icons/icon-192.svg',
