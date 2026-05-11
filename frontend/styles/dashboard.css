@@ -155,6 +155,10 @@ body {
     grid-area: water;
     border-left-color: var(--water-color);
     align-self: stretch;
+    background:
+        linear-gradient(180deg, rgba(8, 15, 22, 0.18), rgba(7, 12, 18, 0.28)),
+        url("../assets/ui/water-tank/water-panel-bg.png") center / 100% 100% no-repeat,
+        var(--dash-panel);
 }
 
 .dash-sport-card {
@@ -468,6 +472,186 @@ body {
     border-radius: 7px;
     background: rgba(32, 49, 67, 0.84);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.dash-water-card {
+    --water-tube-top: 92px;
+    --water-tube-height: 76px;
+    --water-stack-offset: 48px;
+    gap: 0;
+    padding: 12px 16px 18px;
+}
+
+.dash-water-card .water-card-header,
+.dash-water-card .accordion-header {
+    display: block !important;
+    position: relative;
+    z-index: 4;
+    min-height: 58px;
+}
+
+.dash-water-card .water-card-header h3,
+.dash-water-card .accordion-header h3 {
+    position: absolute;
+    left: 50%;
+    top: 24px;
+    width: max-content;
+    z-index: 6;
+    transform: translateX(-50%);
+    text-align: center;
+    margin: 0 !important;
+}
+
+.dash-water-card .water-card-header #waterGoalDisplay,
+.dash-water-card #waterGoalDisplay {
+    display: none !important;
+}
+
+.dash-water-card .water-progress-bg {
+    position: relative;
+    height: 174px;
+    margin: var(--water-stack-offset) 0 6px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: url("../assets/ui/water-tank/water-tube-frame.png") center var(--water-tube-top) / 100% var(--water-tube-height) no-repeat;
+    box-shadow: none;
+}
+
+.dash-water-card .water-progress-bg::before {
+    content: "";
+    position: absolute;
+    left: 1%;
+    right: 1%;
+    top: 10px;
+    height: 76px;
+    z-index: 1;
+    background: url("../assets/ui/water-tank/water-display-frame.png") center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+
+.dash-water-card .water-progress-bg::after {
+    content: "";
+    position: absolute;
+    left: 11%;
+    top: calc(var(--water-tube-top) + 24px);
+    width: var(--water-fill-width, 0%);
+    height: 34px;
+    z-index: 4;
+    border-radius: 999px 0 0 999px;
+    background:
+        radial-gradient(ellipse at 12% 18%, rgba(255, 255, 255, 0.78) 0 4%, transparent 5%),
+        radial-gradient(ellipse at 36% 28%, rgba(255, 255, 255, 0.46) 0 3%, transparent 4%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(80, 232, 255, 0.9) 28%, rgba(0, 158, 232, 0.95)),
+        url("../assets/ui/water-tank/water-liquid.png") left center / auto 100% repeat-x,
+        #28dfff;
+    box-shadow:
+        inset 0 -8px 14px rgba(16, 108, 145, 0.38),
+        0 0 22px rgba(80, 225, 255, 0.34);
+    pointer-events: none;
+    opacity: 0.82;
+    clip-path: polygon(0 26%, 7% 19%, 15% 23%, 23% 13%, 32% 24%, 43% 17%, 54% 21%, 64% 13%, 74% 24%, 84% 17%, 94% 21%, 100% 18%, 100% 100%, 0 100%);
+    animation: waterWave 3.8s ease-in-out infinite;
+    transition: width 0.35s ease;
+}
+
+.dash-water-card .water-progress-fill {
+    position: absolute;
+    left: 11%;
+    top: calc(var(--water-tube-top) + 22px);
+    height: 38px;
+    z-index: 6;
+    display: block;
+    border-radius: 999px 0 0 999px;
+    background:
+        radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1px, transparent 2px),
+        radial-gradient(circle, rgba(255, 255, 255, 0.62) 0 1px, transparent 2px),
+        radial-gradient(circle, rgba(168, 248, 255, 0.8) 0 1px, transparent 2px),
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+    background-size: 46px 30px, 70px 34px, 92px 38px, 160px 100%;
+    background-position: 0 7px, 18px 16px, 42px 5px, -160px 0;
+    mix-blend-mode: screen;
+    opacity: 0.72;
+    pointer-events: none;
+    clip-path: polygon(0 31%, 8% 24%, 17% 28%, 27% 18%, 38% 29%, 50% 20%, 61% 24%, 72% 17%, 84% 27%, 94% 21%, 100% 23%, 100% 100%, 0 100%);
+    animation: waterParticles 2.4s linear infinite;
+}
+
+@keyframes waterWave {
+    0%, 100% {
+        filter: hue-rotate(0deg) brightness(1);
+        background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+    }
+
+    50% {
+        filter: hue-rotate(8deg) brightness(1.12);
+        background-position: 20px 1px, -16px 0, 0 0, 38px 0, 0 0;
+    }
+}
+
+@keyframes waterParticles {
+    from {
+        background-position: 0 28px, 18px 34px, 42px 38px, -160px 0;
+    }
+
+    to {
+        background-position: 46px -10px, 88px -8px, 134px -12px, 160px 0;
+    }
+}
+
+.dash-water-card .water-text {
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    top: 18px;
+    height: 62px;
+    z-index: 2;
+    font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+    color: #a7f4ff;
+    letter-spacing: 0;
+    text-shadow:
+        0 0 12px rgba(86, 235, 255, 0.78),
+        0 2px 2px rgba(0, 0, 0, 0.72);
+}
+
+.dash-water-card .water-text span {
+    padding: 0;
+    background: transparent;
+    border: 0;
+}
+
+.dash-water-card .water-controls {
+    position: relative;
+    z-index: 5;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 18px;
+}
+
+.dash-water-card .water-controls + .water-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 8px !important;
+}
+
+.dash-water-card .water-btn,
+.dash-water-card .water-btn-neg {
+    min-height: 42px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 7px;
+    background:
+        linear-gradient(180deg, rgba(20, 31, 44, 0.18), rgba(7, 10, 16, 0.18)),
+        url("../assets/ui/water-tank/water-button-frame.png") center / 100% 100% no-repeat;
+    color: #a8f4ff;
+    font-size: 1rem;
+    font-weight: 900;
+    text-shadow: 0 1px 3px #001016, 0 0 12px rgba(85, 225, 255, 0.42);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.34);
+}
+
+.dash-water-card .water-btn-neg {
+    color: #ff8fa3;
+    text-shadow: 0 1px 3px #190009, 0 0 12px rgba(255, 83, 130, 0.38);
 }
 
 .dash-air-card::after {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'slv-pwa-v7';
+const CACHE_NAME = 'slv-pwa-v8';
 const APP_SHELL = [
     './',
     './index.html',
@@ -16,6 +16,13 @@ const APP_SHELL = [
     './frontend/assets/ui/fizz-wheel/wheel-core.png',
     './frontend/assets/ui/fizz-wheel/wheel-frame.png',
     './frontend/assets/ui/fizz-wheel/wheel-pointer.png',
+    './frontend/assets/ui/water-tank/water-button-frame.png',
+    './frontend/assets/ui/water-tank/water-display-frame.png',
+    './frontend/assets/ui/water-tank/water-left-cap.png',
+    './frontend/assets/ui/water-tank/water-liquid.png',
+    './frontend/assets/ui/water-tank/water-panel-bg.png',
+    './frontend/assets/ui/water-tank/water-right-cap.png',
+    './frontend/assets/ui/water-tank/water-tube-frame.png',
     './src/firebase/firebase-client.js',
     './manifest.webmanifest',
     './icons/icon-192.svg',
