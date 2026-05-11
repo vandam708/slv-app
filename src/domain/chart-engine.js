@@ -1,32 +1,36 @@
 (function () {
+    const RU_MONTHS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+
     function toNumber(value, fallback = 0) {
         const n = Number(value);
         return Number.isFinite(n) ? n : fallback;
     }
 
-    function parseRuDateToTs(dateStr) {
-        const [dd, mm, yyyy] = String(dateStr || '').split('.');
-        if (!dd || !mm || !yyyy) return NaN;
-        return new Date(`${yyyy}-${mm}-${dd}`).getTime();
+    function parseRuDate(dateStr) {
+        const [dd, mm, yyyy] = String(dateStr || '').split('.').map((part) => Number(part));
+        if (!dd || !mm || !yyyy) return null;
+
+        const date = new Date(yyyy, mm - 1, dd);
+        if (date.getFullYear() !== yyyy || date.getMonth() !== mm - 1 || date.getDate() !== dd) {
+            return null;
+        }
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }
+
+    function formatRuDate(date) {
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        return `${dd}.${mm}.${yyyy}`;
     }
 
     function addDaily(dailyData, dateStr, amount) {
-        if (!dateStr) return;
+        if (!parseRuDate(dateStr)) return;
         dailyData[dateStr] = (dailyData[dateStr] || 0) + toNumber(amount, 0);
     }
 
-    function getChartData(params) {
-        const {
-            period = 'month',
-            localStorageRef,
-            myTasks = [],
-            bogdanTasks = [],
-            sportExercises = [],
-            nutriConfig = []
-        } = params || {};
-
-        if (!localStorageRef) return { labels: [], values: [] };
-
+    function collectDailyData({ localStorageRef, myTasks, bogdanTasks, sportExercises }) {
         const dailyData = {};
         const taskMap = {};
         [...myTasks, ...bogdanTasks].forEach((t) => {
@@ -49,24 +53,21 @@
                     !key.includes('energy') &&
                     !key.includes('oneoff');
 
-                if (isPlainTask) {
+                if (isPlainTask && localStorageRef.getItem(key) === 'true') {
                     const date = parts[1];
                     const id = parts.slice(2).join('_');
-                    if (localStorageRef.getItem(key) === 'true') {
-                        addDaily(dailyData, date, taskMap[id] || 0);
-                    }
+                    addDaily(dailyData, date, taskMap[id] || 0);
                 }
             }
 
             if (key.startsWith('slv_fizz_')) {
                 const parts = key.split('_');
                 if (parts.length >= 4) {
-                    const date = parts[2];
                     try {
                         const data = JSON.parse(localStorageRef.getItem(key));
-                        addDaily(dailyData, date, toNumber(data?.xp, 5));
+                        addDaily(dailyData, parts[2], toNumber(data?.xp, 5));
                     } catch (_) {
-                        addDaily(dailyData, date, 5);
+                        addDaily(dailyData, parts[2], 5);
                     }
                 }
             }
@@ -74,21 +75,19 @@
             if (key.startsWith('slv_nutri_')) {
                 const parts = key.split('_');
                 if (parts.length >= 4) {
-                    const date = parts[2];
                     const val = toNumber(localStorageRef.getItem(key), 0);
-                    if (val > 0) addDaily(dailyData, date, val * 2);
+                    if (val > 0) addDaily(dailyData, parts[2], val * 2);
                 }
             }
 
             if (key.startsWith('slv_sport_')) {
                 const parts = key.split('_');
                 if (parts.length >= 4) {
-                    const date = parts[2];
-                    const id = parts.slice(3).join('_');
                     const count = toNumber(localStorageRef.getItem(key), 0);
                     if (count > 0) {
+                        const id = parts.slice(3).join('_');
                         const rate = toNumber((sportExercises.find((s) => s.id === id) || {}).rate, 0);
-                        addDaily(dailyData, date, count * rate);
+                        addDaily(dailyData, parts[2], count * rate);
                     }
                 }
             }
@@ -96,18 +95,16 @@
             if (key.startsWith('slv_water_')) {
                 const parts = key.split('_');
                 if (parts.length === 3) {
-                    const date = parts[2];
                     const val = toNumber(localStorageRef.getItem(key), 0);
-                    if (val > 0) addDaily(dailyData, date, val / 100);
+                    if (val > 0) addDaily(dailyData, parts[2], val / 100);
                 }
             }
 
             if (key.startsWith('slv_air_')) {
                 const parts = key.split('_');
                 if (parts.length === 3) {
-                    const date = parts[2];
                     const val = toNumber(localStorageRef.getItem(key), 0);
-                    if (val > 0) addDaily(dailyData, date, (val / 15) * 5);
+                    if (val > 0) addDaily(dailyData, parts[2], (val / 15) * 5);
                 }
             }
 
@@ -126,25 +123,81 @@
                         const log = JSON.parse(localStorageRef.getItem(key) || '[]');
                         log.forEach((item) => addDaily(dailyData, date, toNumber(item?.xp, 0)));
                     } catch (_) {
-                        // ignore malformed log
+                        // Ignore malformed one-off logs.
                     }
                 }
             }
         }
 
-        const entries = Object.entries(dailyData)
-            .map(([date, value]) => ({ date, value: toNumber(value, 0), ts: parseRuDateToTs(date) }))
-            .filter((x) => Number.isFinite(x.ts))
-            .sort((a, b) => a.ts - b.ts);
+        return dailyData;
+    }
 
-        let filtered = entries;
-        if (period === 'week') filtered = entries.slice(-7);
-        else if (period === 'month') filtered = entries.slice(-30);
+    function getSortedEntries(dailyData) {
+        return Object.entries(dailyData)
+            .map(([date, value]) => ({ date, value: toNumber(value, 0), dateObj: parseRuDate(date) }))
+            .filter((x) => x.dateObj)
+            .sort((a, b) => a.dateObj - b.dateObj);
+    }
+
+    function getMonthData(dailyData, today) {
+        const cursor = new Date(today.getFullYear(), today.getMonth(), 1);
+        const end = new Date(today);
+        end.setHours(0, 0, 0, 0);
+        const labels = [];
+        const values = [];
+
+        while (cursor <= end) {
+            const dateStr = formatRuDate(cursor);
+            labels.push(dateStr.slice(0, 5));
+            values.push(Math.floor(toNumber(dailyData[dateStr], 0)));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        return { labels, values };
+    }
+
+    function getYearData(dailyData, today) {
+        const year = today.getFullYear();
+        const valuesByMonth = Array(12).fill(0);
+
+        getSortedEntries(dailyData).forEach((entry) => {
+            if (entry.dateObj.getFullYear() === year) {
+                valuesByMonth[entry.dateObj.getMonth()] += entry.value;
+            }
+        });
 
         return {
-            labels: filtered.map((x) => x.date.slice(0, 5)),
-            values: filtered.map((x) => Math.floor(x.value))
+            labels: RU_MONTHS,
+            values: valuesByMonth.map((value) => Math.floor(value))
         };
+    }
+
+    function getAllTimeData(dailyData) {
+        const entries = getSortedEntries(dailyData);
+        return {
+            labels: entries.map((x) => x.date.slice(0, 5)),
+            values: entries.map((x) => Math.floor(x.value))
+        };
+    }
+
+    function getChartData(params) {
+        const {
+            period = 'month',
+            localStorageRef,
+            myTasks = [],
+            bogdanTasks = [],
+            sportExercises = []
+        } = params || {};
+
+        if (!localStorageRef) return { labels: [], values: [] };
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dailyData = collectDailyData({ localStorageRef, myTasks, bogdanTasks, sportExercises });
+
+        if (period === 'year') return getYearData(dailyData, today);
+        if (period === 'all') return getAllTimeData(dailyData);
+        return getMonthData(dailyData, today);
     }
 
     window.SLVChartEngine = {
