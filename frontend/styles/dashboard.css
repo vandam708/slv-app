@@ -189,55 +189,378 @@ body {
 }
 
 .dash-energy-card {
+    --energy-glow: 0.58;
+    --energy-progress-pct: 50;
+    --energy-status-color: #ffd166;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto 1fr auto auto;
-    column-gap: 18px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(210px, 1fr) auto auto;
+    gap: 18px;
+    box-sizing: border-box;
+    min-height: 340px;
+    padding: 20px 22px 22px;
+    border: 1px solid rgba(150, 158, 172, 0.36);
+    border-left: 1px solid rgba(150, 158, 172, 0.36) !important;
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 50% 44%, rgba(255, 203, 78, calc(0.08 + var(--energy-glow) * 0.12)), transparent 36%),
+        radial-gradient(circle at 30% 48%, rgba(65, 207, 226, calc(0.06 + var(--energy-glow) * 0.08)), transparent 36%),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.018) 40%),
+        linear-gradient(180deg, rgba(43, 47, 54, 0.96), rgba(28, 32, 39, 0.98));
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+        0 16px 30px rgba(0, 0, 0, 0.4);
 }
 
-.dash-energy-card h3 {
-    grid-column: 1 / -1;
+.dash-energy-card::before {
+    opacity: 0.16;
 }
 
-.dash-energy-card label {
-    align-self: start;
-    color: #d6e4ef;
+.energy-card-header {
+    display: flex;
+    align-items: center;
+    min-height: 34px;
+}
+
+.dash-energy-card .energy-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    color: #f0f1f4 !important;
+    font-size: clamp(1.45rem, 1.9vw, 1.95rem);
+    font-weight: 500;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.62);
+}
+
+.energy-title-icon {
+    color: #ffc24b;
+    font-size: 1.35em;
+    line-height: 1;
+    filter:
+        drop-shadow(0 0 7px rgba(255, 191, 67, 0.46))
+        drop-shadow(0 1px 2px rgba(0, 0, 0, 0.58));
+}
+
+.energy-dial-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding-bottom: 12px;
+    z-index: 1;
+}
+
+.energy-dial {
+    position: relative;
+    width: min(254px, 78%);
+    max-width: 282px;
+    min-width: 188px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    isolation: isolate;
+    filter:
+        drop-shadow(0 0 calc(18px + var(--energy-glow) * 26px) rgba(255, 196, 72, calc(0.1 + var(--energy-glow) * 0.22)))
+        drop-shadow(0 0 calc(14px + var(--energy-glow) * 20px) rgba(80, 208, 220, calc(0.08 + var(--energy-glow) * 0.14)));
+}
+
+.energy-dial::after {
+    content: "";
+    position: absolute;
+    inset: -5%;
+    border: 1px solid rgba(255, 209, 102, 0.55);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+.energy-dial:focus-within::after {
+    opacity: 1;
+}
+
+.energy-dial-svg {
+    position: absolute;
+    inset: -12%;
+    width: 124%;
+    height: 124%;
+    overflow: visible;
+}
+
+.energy-dial-bg {
+    fill: rgba(21, 27, 34, 0.82);
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1.2;
+}
+
+.energy-orbit-track,
+.energy-progress-track,
+.energy-inner-track {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+.energy-orbit-track {
+    stroke-width: 7;
+}
+
+.energy-progress-track {
+    stroke-width: 19;
+    opacity: 0.26;
+}
+
+.energy-inner-track {
+    stroke: rgba(255, 209, 102, 0.55);
+    stroke-width: 1.8;
+}
+
+.energy-segment,
+.energy-segment-glow,
+.energy-progress {
+    fill: none;
+    stroke-linecap: round;
+    transition: opacity 0.22s ease, filter 0.22s ease;
+}
+
+.energy-segment {
+    stroke-width: 7.5;
+    opacity: calc(0.12 + var(--energy-glow) * 0.08);
+}
+
+.energy-segment.is-active {
+    opacity: calc(0.72 + var(--energy-glow) * 0.28);
+    filter: none;
+}
+
+.energy-segment-glow {
+    stroke-width: 14;
+    opacity: 0;
+}
+
+.energy-segment-glow.is-active {
+    opacity: calc(0.24 + var(--energy-glow) * 0.26);
+    filter: url(#energyGlow);
+}
+
+.energy-progress {
+    stroke: url(#energyProgressGradient);
+    stroke-width: 19;
+    filter: url(#energyGlow);
+    opacity: calc(0.56 + var(--energy-glow) * 0.44);
+}
+
+.energy-inner-glow {
+    fill: none;
+    stroke: rgba(255, 210, 99, calc(0.28 + var(--energy-glow) * 0.38));
+    stroke-width: 1.2;
+    filter: url(#energySoftGlow);
+}
+
+.energy-dial-core {
+    position: absolute;
+    inset: 31%;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, rgba(16, 22, 30, 0.96) 0 58%, rgba(18, 24, 32, 0.72) 72%, transparent 100%);
+    box-shadow:
+        inset 0 0 28px rgba(0, 0, 0, 0.62),
+        0 0 calc(18px + var(--energy-glow) * 24px) rgba(255, 194, 75, calc(0.08 + var(--energy-glow) * 0.18));
+    pointer-events: none;
+    z-index: 2;
+}
+
+.energy-core-label {
+    color: var(--energy-status-color);
+    font-size: clamp(1.28rem, 1.8vw, 1.72rem);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-shadow: 0 0 14px rgba(255, 205, 92, calc(0.16 + var(--energy-glow) * 0.28));
+}
+
+.energy-value {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
 }
 
 .energy-range {
-    align-self: center;
-    accent-color: var(--primary);
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+}
+
+.energy-actions {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+    margin-top: 22px;
 }
 
 .energy-btn {
-    grid-column: 2;
-    align-self: end;
-    min-height: 42px;
-    background: linear-gradient(180deg, rgba(48, 151, 139, 0.82), rgba(30, 93, 92, 0.92));
-    border-color: rgba(90, 255, 229, 0.48);
-    color: #d8fff8;
-    box-shadow: 0 0 16px rgba(6, 214, 160, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 58px;
+    margin-top: 0;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 10px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035)),
+        rgba(80, 82, 88, 0.72);
+    color: rgba(236, 236, 239, 0.64);
+    font-size: clamp(1rem, 1.08vw, 1.12rem);
+    font-weight: 500;
+    letter-spacing: 0;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.055),
+        0 10px 18px rgba(0, 0, 0, 0.28);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+}
+
+.energy-btn:active {
+    transform: translateY(1px);
+}
+
+.energy-btn-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    color: var(--energy-status-color);
+    font-weight: 700;
+}
+
+.energy-status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--energy-status-color);
+    box-shadow: 0 0 12px var(--energy-status-color);
+}
+
+.energy-calendar-btn {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 68px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+
+.energy-calendar-btn:focus-visible {
+    outline: 2px solid rgba(255, 209, 102, 0.9);
+    outline-offset: 4px;
+    border-radius: 10px;
+}
+
+.energy-calendar-icon {
+    position: relative;
+    width: 41px;
+    height: 39px;
+    justify-self: center;
+    opacity: 0.86;
+    border: 3px solid rgba(232, 235, 241, 0.74);
+    border-radius: 6px;
+    background:
+        radial-gradient(circle, rgba(232, 235, 241, 0.74) 0 2px, transparent 2.5px) 9px 18px / 10px 10px no-repeat,
+        radial-gradient(circle, rgba(232, 235, 241, 0.74) 0 2px, transparent 2.5px) 20px 18px / 10px 10px no-repeat,
+        radial-gradient(circle, rgba(232, 235, 241, 0.74) 0 2px, transparent 2.5px) 9px 28px / 10px 10px no-repeat,
+        radial-gradient(circle, rgba(232, 235, 241, 0.74) 0 2px, transparent 2.5px) 20px 28px / 10px 10px no-repeat;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.08);
+}
+
+.energy-calendar-btn:hover .energy-calendar-icon,
+.energy-calendar-btn[aria-expanded="true"] .energy-calendar-icon {
+    opacity: 1;
+    border-color: rgba(255, 209, 102, 0.92);
+    box-shadow: 0 0 18px rgba(255, 209, 102, 0.26);
+}
+
+.energy-calendar-icon::before {
+    content: "";
+    position: absolute;
+    left: -3px;
+    right: -3px;
+    top: 7px;
+    height: 3px;
+    background: rgba(232, 235, 241, 0.74);
+}
+
+.energy-calendar-icon::after {
+    content: "";
+    position: absolute;
+    right: -12px;
+    bottom: -7px;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(232, 235, 241, 0.74);
+    border-radius: 50%;
+    background:
+        linear-gradient(90deg, transparent 0 48%, rgba(232, 235, 241, 0.74) 49% 55%, transparent 56%) 50% 42% / 12px 12px no-repeat,
+        linear-gradient(0deg, transparent 0 48%, rgba(232, 235, 241, 0.74) 49% 55%, transparent 56%) 57% 52% / 12px 12px no-repeat,
+        rgba(38, 42, 50, 0.95);
 }
 
 .energy-log {
-    grid-column: 1 / -1;
-    max-height: 86px;
+    display: none;
+    max-height: 118px;
     overflow: auto;
+    margin-top: 2px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(11, 15, 22, 0.38);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    color: rgba(235, 238, 244, 0.82);
+    font-size: 0.86rem;
 }
 
-.dash-energy-card::after {
-    content: "";
-    position: absolute;
-    left: 44px;
-    top: 92px;
-    width: 132px;
-    height: 132px;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle, rgba(255, 227, 132, 0.98) 0 8%, rgba(76, 201, 240, 0.96) 11%, rgba(76, 201, 240, 0.12) 38%, transparent 62%),
-        conic-gradient(from 30deg, transparent, rgba(76, 201, 240, 0.8), transparent, rgba(255, 209, 102, 0.8), transparent);
-    filter: drop-shadow(0 0 22px rgba(76, 201, 240, 0.6));
-    opacity: 0.9;
+.dash-energy-card.energy-log-open .energy-log {
+    display: grid;
+    gap: 6px;
+}
+
+.energy-log-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.energy-log-time {
+    color: rgba(236, 238, 244, 0.7);
+}
+
+.energy-log-state {
+    color: var(--energy-status-color);
+    font-weight: 700;
+}
+
+.energy-log-empty {
+    color: rgba(236, 238, 244, 0.58);
 }
 
 .sleep-card-header {

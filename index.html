@@ -57,12 +57,27 @@
             <h2>📅 SLV: Мой День</h2>
 
             <div class="card dash-card dash-energy-card" style="border-left-color: var(--warning);">
-                <h3 style="color:var(--warning); margin-bottom:10px;">🔋 Моя Энергия</h3><label>Уровень: <span
-                        id="energyVal" style="font-weight:bold; color:var(--warning);">5</span> <span id="energyText"
-                        class="energy-status">😐 Норма</span></label><input type="range" min="1" max="10" value="5"
-                    style="width:100%; margin-top:10px;" class="energy-range"
-                    oninput="updateEnergyUI(this.value)"><button class="energy-btn" onclick="logEnergy()">⏱ Записать
-                    состояние</button>
+                <div class="energy-card-header">
+                    <h3 class="energy-title"><span class="energy-title-icon" aria-hidden="true">⚡</span>Моя Энергия</h3>
+                </div>
+                <div class="energy-dial-wrap">
+                    <div class="energy-dial" id="energyDial">
+                        <svg class="energy-dial-svg" viewBox="0 0 260 260" aria-hidden="true"></svg>
+                        <div class="energy-dial-core">
+                            <span id="energyText" class="energy-core-label">Норма</span>
+                            <span id="energyVal" class="energy-value">5</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="5" class="energy-range"
+                            aria-label="Уровень энергии" oninput="updateEnergyUI(this.value)">
+                    </div>
+                </div>
+                <div class="energy-actions">
+                    <button class="energy-calendar-btn" type="button" aria-label="Показать состояния за сегодня"
+                        aria-expanded="false"><span class="energy-calendar-icon" aria-hidden="true"></span></button>
+                    <button class="energy-btn" type="button"><span>Записать состояние</span><span
+                            class="energy-btn-status"><span class="energy-status-dot" aria-hidden="true"></span><span
+                                id="energyButtonText">Норма</span></span></button>
+                </div>
                 <div id="energyLog" class="energy-log"></div>
             </div>
 
@@ -840,9 +855,10 @@
             if (val <= 8) return "💪 Бодрость";
             return "🚀 Ракета";
         }
-        function updateEnergyUI(val) { energyValue = val; if (energyPanel) energyPanel.update({ value: val, label: getEnergyText(val) }); }
-        function logEnergy() { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_energy_log_${t}`; let l = JSON.parse(localStorage.getItem(k) || '[]'); l.push({ time: new Date().toTimeString().substring(0, 5), val: energyValue }); localStorage.setItem(k, JSON.stringify(l)); renderEnergy(); renderAll(); }
-        function renderEnergy() { const t = new Date().toLocaleDateString('ru-RU'); const l = JSON.parse(localStorage.getItem(`slv_energy_log_${t}`) || '[]'); if (l.length > 0) energyValue = l[l.length - 1].val; if (energyPanel) energyPanel.update({ value: energyValue, label: getEnergyText(energyValue), log: l, getEnergyText }); }
+        function updateEnergyUI(val) { energyValue = Number(val); if (energyPanel) energyPanel.update({ value: energyValue, label: getEnergyText(energyValue) }); }
+        function logEnergy() { const t = new Date().toLocaleDateString('ru-RU'); const k = `slv_energy_log_${t}`; let l = JSON.parse(localStorage.getItem(k) || '[]'); l.push({ time: new Date().toTimeString().substring(0, 5), val: Number(energyValue) }); localStorage.setItem(k, JSON.stringify(l)); renderEnergy(); renderAll(); }
+        function renderEnergy() { const t = new Date().toLocaleDateString('ru-RU'); const l = JSON.parse(localStorage.getItem(`slv_energy_log_${t}`) || '[]'); if (l.length > 0) energyValue = Number(l[l.length - 1].val); if (energyPanel) energyPanel.update({ value: energyValue, label: getEnergyText(energyValue), log: l, getEnergyText }); }
+        window.updateEnergyUI = updateEnergyUI; window.logEnergy = logEnergy; window.renderEnergy = renderEnergy;
         function renderSportCard() { const t = new Date().toLocaleDateString('ru-RU'); if (sportPanel) sportPanel.update({ exercises: sportExercises, getCount: (ex) => parseInt(localStorage.getItem(`slv_sport_${t}_${ex.id}`) || '0') }); }
         function changeSport(id, d) { const t = new Date().toLocaleDateString('ru-RU'); let c = parseInt(localStorage.getItem(`slv_sport_${t}_${id}`) || 0) + d; setSportExact(id, c < 0 ? 0 : c); }
         function setSportExact(id, v) { const t = new Date().toLocaleDateString('ru-RU'); const old = parseInt(localStorage.getItem(`slv_sport_${t}_${id}`) || 0); const val = parseInt(v); if (isNaN(val)) return; const rate = sportExercises.find(e => e.id === id).rate; localStorage.setItem(`slv_sport_${t}_${id}`, val); totalXP = X.add ? X.add(totalXP, (val - old) * rate) : (totalXP + ((val - old) * rate)); if (S.setNumber) S.setNumber('slv_total_xp', totalXP, 0); else localStorage.setItem('slv_total_xp', totalXP); renderAll(); }

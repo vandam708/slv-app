@@ -1,4 +1,4 @@
-const CACHE_NAME = 'slv-pwa-v22';
+const CACHE_NAME = 'slv-pwa-v25';
 const APP_SHELL = [
     './',
     './index.html',
