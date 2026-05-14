@@ -1,4 +1,4 @@
-const CACHE_NAME = 'slv-pwa-v18';
+const CACHE_NAME = 'slv-pwa-v22';
 const APP_SHELL = [
     './',
     './index.html',
@@ -29,6 +29,12 @@ const APP_SHELL = [
     './frontend/assets/ui/air-street/air-scene-full.png',
     './frontend/assets/ui/air-street/air-side-button-minus.png',
     './frontend/assets/ui/air-street/air-side-button-plus.png',
+    './frontend/assets/ui/sleep-dial/sleep-dial-day-face.png',
+    './frontend/assets/ui/sleep-dial/sleep-dial-marks.png',
+    './frontend/assets/ui/sleep-dial/sleep-dial-night-face.png',
+    './frontend/assets/ui/sleep-dial/sleep-dial-ring.png',
+    './frontend/assets/ui/sleep-dial/sleep-end-handle.png',
+    './frontend/assets/ui/sleep-dial/sleep-start-handle.png',
     './src/firebase/firebase-client.js',
     './manifest.webmanifest',
     './icons/icon-192.svg',

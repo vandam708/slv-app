@@ -5,88 +5,70 @@
         const resultEl = document.getElementById(options.resultId || 'sleepResultDisplay');
         const cardEl = document.querySelector(options.cardSelector || '.dash-sleep-card');
         let dialEl = null;
-        let arcEl = null;
+        let nightFaceEl = null;
         let startHandleEl = null;
         let endHandleEl = null;
 
-        function timeToHours(value) {
+        function timeToMinutes(value) {
             if (!value || !String(value).includes(':')) return null;
             const [hours, minutes] = String(value).split(':').map(Number);
             if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-            return hours + minutes / 60;
+            return hours * 60 + minutes;
+        }
+
+        function getSleepMetrics(start, end) {
+            const startMinutes = timeToMinutes(start);
+            const endMinutes = timeToMinutes(end);
+            if (startMinutes === null || endMinutes === null) return null;
+
+            let duration = endMinutes - startMinutes;
+            if (duration < 0) duration += 24 * 60;
+
+            const startClockMinutes = startMinutes % (12 * 60);
+            const endClockMinutes = endMinutes % (12 * 60);
+            const startDeg = (startClockMinutes / (12 * 60)) * 360;
+            const sweepDeg = Math.min(360, (duration / (12 * 60)) * 360);
+
+            return {
+                startMinutes,
+                endMinutes,
+                duration,
+                startDeg,
+                endDeg: (endClockMinutes / (12 * 60)) * 360,
+                sweepDeg
+            };
         }
 
         function formatDuration(start, end) {
-            const startHours = timeToHours(start);
-            const endHours = timeToHours(end);
-            if (startHours === null || endHours === null) return '-- ч -- мин';
+            const metrics = getSleepMetrics(start, end);
+            if (!metrics) return '-- ч -- мин';
 
-            let diff = endHours - startHours;
-            if (diff < 0) diff += 24;
-            const hours = Math.floor(diff);
-            const minutes = Math.round((diff - hours) * 60);
+            const hours = Math.floor(metrics.duration / 60);
+            const minutes = metrics.duration % 60;
             return `${hours} ч ${minutes} мин`;
         }
 
-        function polarPosition(hours, radius = 50) {
-            const angle = (hours / 24) * 360 - 90;
-            const rad = angle * Math.PI / 180;
+        function polarPosition(deg, radius = 43) {
+            const rad = (deg - 90) * Math.PI / 180;
             return {
                 x: 50 + Math.cos(rad) * radius,
                 y: 50 + Math.sin(rad) * radius
             };
         }
 
-        function buildNightGradient(start, end) {
-            const startHours = timeToHours(start);
-            const endHours = timeToHours(end);
-            if (startHours === null || endHours === null || start === end) {
-                return 'conic-gradient(from -90deg, rgba(245,248,255,.92) 0deg 360deg)';
-            }
-
-            const startDeg = (startHours / 24) * 360;
-            const endDeg = (endHours / 24) * 360;
-            const day = 'rgba(244,248,255,.93)';
-            const nightA = '#18295f';
-            const nightB = '#0b5363';
-
-            if (startDeg <= endDeg) {
-                return `conic-gradient(from -90deg, ${day} 0deg ${startDeg}deg, ${nightA} ${startDeg}deg, ${nightB} ${endDeg}deg, ${day} ${endDeg}deg 360deg)`;
-            }
-
-            return `conic-gradient(from -90deg, ${nightB} 0deg ${endDeg}deg, ${day} ${endDeg}deg ${startDeg}deg, ${nightA} ${startDeg}deg 360deg)`;
-        }
-
         function ensureDial() {
             if (!cardEl || dialEl) return;
-
-            const labels = [24, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
-                .map((label) => {
-                    const hours = label === 24 ? 0 : label;
-                    const pos = polarPosition(hours, 57);
-                    return `<span class="sleep-clock-label" style="left:${pos.x}%; top:${pos.y}%">${label}</span>`;
-                })
-                .join('');
-
-            const ticks = Array.from({ length: 24 }, (_, index) => {
-                const pos = polarPosition(index, 43);
-                const rotation = (index / 24) * 360;
-                return `<span class="sleep-clock-tick" style="left:${pos.x}%; top:${pos.y}%; transform:translate(-50%, -50%) rotate(${rotation}deg)"></span>`;
-            }).join('');
 
             const shell = document.createElement('div');
             shell.className = 'sleep-dial-shell';
             shell.innerHTML = `
-                <div class="sleep-dial">
-                    <div class="sleep-dial-face">
-                        <div class="sleep-day-symbol">☀️</div>
-                        <div class="sleep-night-symbol">🌙</div>
-                        <div class="sleep-stars">✦ · ✧</div>
-                    </div>
-                    ${labels}
-                    ${ticks}
-                    <span class="sleep-handle sleep-handle-start" title="Лёг"></span>
-                    <span class="sleep-handle sleep-handle-end" title="Встал"></span>
+                <div class="sleep-dial" aria-hidden="true">
+                    <img class="sleep-dial-ring" src="./frontend/assets/ui/sleep-dial/sleep-dial-ring.png" alt="">
+                    <img class="sleep-dial-face-img sleep-dial-day-face" src="./frontend/assets/ui/sleep-dial/sleep-dial-day-face.png" alt="">
+                    <img class="sleep-dial-face-img sleep-dial-night-face" src="./frontend/assets/ui/sleep-dial/sleep-dial-night-face.png" alt="">
+                    <img class="sleep-dial-marks" src="./frontend/assets/ui/sleep-dial/sleep-dial-marks.png" alt="">
+                    <img class="sleep-handle sleep-handle-start" src="./frontend/assets/ui/sleep-dial/sleep-start-handle.png" alt="">
+                    <img class="sleep-handle sleep-handle-end" src="./frontend/assets/ui/sleep-dial/sleep-end-handle.png" alt="">
                 </div>
             `;
 
@@ -95,29 +77,39 @@
             else cardEl.appendChild(shell);
 
             dialEl = shell.querySelector('.sleep-dial');
-            arcEl = shell.querySelector('.sleep-dial-face');
+            nightFaceEl = shell.querySelector('.sleep-dial-night-face');
             startHandleEl = shell.querySelector('.sleep-handle-start');
             endHandleEl = shell.querySelector('.sleep-handle-end');
         }
 
         function renderDial(start, end) {
             ensureDial();
-            if (!dialEl || !arcEl) return;
+            if (!dialEl) return;
 
-            arcEl.style.background = buildNightGradient(start, end);
+            const metrics = getSleepMetrics(start, end);
+            const hasRange = Boolean(metrics && metrics.duration > 0);
+            dialEl.classList.toggle('sleep-has-range', hasRange);
 
-            const startHours = timeToHours(start);
-            const endHours = timeToHours(end);
-            if (startHandleEl) {
-                const pos = polarPosition(startHours === null ? 22 : startHours, 50);
-                startHandleEl.style.left = `${pos.x}%`;
-                startHandleEl.style.top = `${pos.y}%`;
+            if (!metrics) {
+                dialEl.style.setProperty('--sleep-mask-from', '0deg');
+                dialEl.style.setProperty('--sleep-sweep-deg', '0deg');
+                setHandlePosition(startHandleEl, 0);
+                setHandlePosition(endHandleEl, (8 / 12) * 360);
+                return;
             }
-            if (endHandleEl) {
-                const pos = polarPosition(endHours === null ? 7 : endHours, 50);
-                endHandleEl.style.left = `${pos.x}%`;
-                endHandleEl.style.top = `${pos.y}%`;
-            }
+
+            dialEl.style.setProperty('--sleep-mask-from', `${metrics.startDeg}deg`);
+            dialEl.style.setProperty('--sleep-sweep-deg', `${metrics.sweepDeg}deg`);
+            if (nightFaceEl) nightFaceEl.style.opacity = hasRange ? '1' : '0';
+            setHandlePosition(startHandleEl, metrics.startDeg);
+            setHandlePosition(endHandleEl, metrics.endDeg);
+        }
+
+        function setHandlePosition(handle, deg) {
+            if (!handle) return;
+            const pos = polarPosition(deg, 43);
+            handle.style.left = `${pos.x}%`;
+            handle.style.top = `${pos.y}%`;
         }
 
         function updateFromInputs() {
@@ -142,7 +134,7 @@
                 const { start = '', end = '', diff = '' } = state;
                 if (startEl) startEl.value = start;
                 if (endEl) endEl.value = end;
-                if (resultEl) resultEl.innerText = diff || '-- ч -- мин';
+                if (resultEl) resultEl.innerText = diff || formatDuration(start, end);
                 renderDial(start, end);
                 return { start, end, diff };
             },

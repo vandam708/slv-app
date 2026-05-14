@@ -67,15 +67,18 @@
             </div>
 
             <div class="card sleep-card dash-card dash-sleep-card">
-                <h3 style="color:var(--sleep-color); margin-top:0;">💤 Сон (Режим)</h3>
+                <div class="sleep-card-header">
+                    <h3 style="color:var(--sleep-color); margin-top:0;"><span class="sleep-title-icon"
+                            aria-hidden="true"></span>Сон <span>(Режим)</span></h3>
+                    <button class="sleep-save-btn" onclick="saveSleep()">Сохранить</button>
+                </div>
                 <div class="sleep-inputs">
-                    <div class="sleep-field"><span class="sleep-label">🌙 Лёг спать</span><input type="time"
+                    <div class="sleep-field"><span class="sleep-label">Лёг</span><input type="time"
                             id="sleepStart" class="sleep-time-input"></div>
-                    <div class="sleep-field"><span class="sleep-label">☀️ Встал</span><input type="time" id="sleepEnd"
+                    <div class="sleep-field"><span class="sleep-label">Встал</span><input type="time" id="sleepEnd"
                             class="sleep-time-input"></div>
                 </div>
-                <div class="sleep-footer"><span id="sleepResultDisplay" class="sleep-result">-- ч -- мин</span><button
-                        class="sleep-save-btn" onclick="saveSleep()">💾 Сохранить</button></div>
+                <div class="sleep-footer"><span id="sleepResultDisplay" class="sleep-result">-- ч -- мин</span></div>
             </div>
 
             <div class="card water-card dash-card dash-water-card">

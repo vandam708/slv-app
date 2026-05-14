@@ -144,11 +144,20 @@ body {
     grid-area: sleep;
     border-left-color: var(--sleep-color);
     display: grid;
-    grid-template-columns: 186px minmax(0, 1fr);
-    grid-template-rows: auto 1fr auto;
-    gap: 6px 16px;
-    align-items: center;
-    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(210px, 1fr) auto auto;
+    gap: 8px;
+    min-height: 330px;
+    padding: 16px 18px;
+    border: 1px solid rgba(142, 143, 176, 0.24);
+    border-left: 1px solid rgba(142, 143, 176, 0.24);
+    background:
+        radial-gradient(circle at 50% 42%, rgba(143, 137, 255, 0.12), transparent 34%),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.07), transparent 36%),
+        linear-gradient(180deg, rgba(38, 40, 47, 0.96), rgba(21, 25, 33, 0.98));
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 14px 28px rgba(0, 0, 0, 0.42);
 }
 
 .dash-water-card {
@@ -231,6 +240,159 @@ body {
     opacity: 0.9;
 }
 
+.sleep-card-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    min-height: 42px;
+    min-width: 0;
+}
+
+.dash-sleep-card h3 {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    transform: translate(-50%, -50%);
+    color: #f2f3ff !important;
+    font-size: clamp(1.05rem, 1.45vw, 1.45rem);
+    font-weight: 500;
+    line-height: 1;
+    text-transform: none;
+}
+
+.dash-sleep-card h3 span:last-child {
+    color: #9f96f4;
+}
+
+.sleep-title-icon {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #8f84ee;
+    box-shadow: 0 0 16px rgba(143, 132, 238, 0.36);
+}
+
+.sleep-title-icon::before {
+    content: "";
+    position: absolute;
+    right: -3px;
+    top: -2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #252934;
+}
+
+.sleep-title-icon::after {
+    content: "z";
+    position: absolute;
+    right: -12px;
+    top: -7px;
+    color: #a79eff;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-shadow: 8px 7px 0 rgba(167, 158, 255, 0.58);
+}
+
+.sleep-dial-shell {
+    width: min(258px, 86%);
+    aspect-ratio: 1;
+    justify-self: center;
+    align-self: center;
+    margin: -2px auto 0;
+    filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.38));
+}
+
+.sleep-dial {
+    --sleep-mask-from: -90deg;
+    --sleep-sweep-deg: 0deg;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.sleep-dial-ring,
+.sleep-dial-face-img,
+.sleep-dial-marks,
+.sleep-handle {
+    position: absolute;
+    display: block;
+    user-select: none;
+    pointer-events: none;
+}
+
+.sleep-dial-ring {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 4;
+}
+
+.sleep-dial-face-img {
+    inset: 13.9%;
+    width: 72.2%;
+    height: 72.2%;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.sleep-dial-day-face {
+    z-index: 2;
+}
+
+.sleep-dial-night-face {
+    z-index: 3;
+    opacity: 0;
+    transform: scale(1.09);
+    transform-origin: 50% 50%;
+    object-position: center 44%;
+    -webkit-mask-image: conic-gradient(from var(--sleep-mask-from), #000 0deg var(--sleep-sweep-deg), transparent var(--sleep-sweep-deg) 360deg);
+    mask-image: conic-gradient(from var(--sleep-mask-from), #000 0deg var(--sleep-sweep-deg), transparent var(--sleep-sweep-deg) 360deg);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    transition: opacity 0.2s ease;
+}
+
+.sleep-has-range .sleep-dial-night-face {
+    opacity: 1;
+}
+
+.sleep-dial-marks {
+    left: 4.7%;
+    top: 8.8%;
+    width: 88.2%;
+    height: 87.8%;
+    object-fit: contain;
+    z-index: 5;
+    opacity: 0.82;
+    mix-blend-mode: screen;
+}
+
+.sleep-handle {
+    width: 14.5%;
+    height: auto;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.36));
+}
+
+.sleep-handle-end {
+    width: 13.6%;
+}
+
 .dash-sleep-card .sleep-inputs {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -239,121 +401,32 @@ body {
     margin: 0;
 }
 
-.dash-sleep-card h3 {
-    grid-column: 1 / -1;
-    color: #a9a4ff !important;
-}
-
-.sleep-dial-shell {
-    grid-row: 2 / 4;
-    width: 168px;
-    aspect-ratio: 1;
-    justify-self: center;
-    align-self: center;
-    filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.38));
-}
-
-.sleep-dial {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-}
-
-.sleep-dial::before {
-    content: "";
-    position: absolute;
-    inset: 14%;
-    border-radius: 50%;
-    background:
-        radial-gradient(circle at 50% 50%, rgba(10, 15, 24, 0.16), transparent 34%),
-        linear-gradient(145deg, rgba(255, 255, 255, 0.52), rgba(12, 23, 53, 0.42));
-    border: 10px solid rgba(12, 18, 28, 0.72);
-    box-shadow:
-        inset 0 0 0 2px rgba(255, 255, 255, 0.18),
-        0 0 0 8px rgba(255, 255, 255, 0.08);
-}
-
-.sleep-dial-face {
-    position: absolute;
-    inset: 20%;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    overflow: hidden;
-    box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.22);
-}
-
-.sleep-day-symbol,
-.sleep-night-symbol,
-.sleep-stars {
-    position: absolute;
-    z-index: 2;
-    pointer-events: none;
-}
-
-.sleep-day-symbol {
-    top: 23%;
-    left: 43%;
-    font-size: 1.35rem;
-}
-
-.sleep-night-symbol {
-    bottom: 22%;
-    right: 34%;
-    font-size: 1.45rem;
-    filter: drop-shadow(0 0 8px rgba(100, 220, 255, 0.6));
-}
-
-.sleep-stars {
-    top: 45%;
-    right: 20%;
-    font-size: 0.8rem;
-    color: #ffd166;
-}
-
-.sleep-clock-label {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    color: rgba(232, 238, 248, 0.82);
-    font-size: 0.74rem;
-    font-weight: 800;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-.sleep-clock-tick {
-    position: absolute;
-    width: 1px;
-    height: 8px;
-    background: rgba(13, 20, 34, 0.7);
-    transform-origin: 50% 50%;
-    z-index: 3;
-}
-
-.sleep-handle {
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    border: 2px solid rgba(255, 255, 255, 0.95);
-    box-shadow: 0 0 0 3px rgba(60, 70, 110, 0.5), 0 5px 12px rgba(0, 0, 0, 0.35);
-    z-index: 5;
-}
-
-.sleep-handle-start {
-    background: #5ab8dc;
-}
-
-.sleep-handle-end {
-    background: #7569de;
-}
-
 .dash-sleep-card .sleep-field {
     min-width: 0;
+    padding: 7px 9px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(166, 157, 244, 0.18);
+}
+
+.dash-sleep-card .sleep-label {
+    margin-bottom: 4px;
+    color: rgba(220, 221, 236, 0.66);
+    font-size: 0.66rem;
+}
+
+.dash-sleep-card .sleep-time-input {
+    padding: 6px 7px;
+    border-radius: 7px;
+    background: rgba(7, 10, 16, 0.56);
+    border-color: rgba(166, 157, 244, 0.24);
+    color: #f1f2ff;
+    font-size: 0.86rem;
 }
 
 .dash-sleep-card .sleep-footer {
-    grid-column: 2;
+    display: flex;
+    justify-content: flex-start;
     margin: 0;
     border-top: 0;
     padding-top: 0;
@@ -362,16 +435,30 @@ body {
 }
 
 .dash-sleep-card .sleep-result {
-    color: #eaf2ff;
-    font-size: 1.16rem;
+    color: #f5f6ff;
+    font-size: clamp(1.12rem, 1.5vw, 1.45rem);
+    font-weight: 500;
     letter-spacing: 0;
+    white-space: nowrap;
 }
 
 .dash-sleep-card .sleep-save-btn {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.045)),
+        rgba(77, 76, 88, 0.72);
+    color: #aaa2f7;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.055),
+        0 8px 14px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 0 10px rgba(160, 151, 247, 0.32);
+}
+
+.dash-sleep-card .sleep-save-btn {
+    position: relative;
+    z-index: 1;
     min-width: 104px;
-    padding: 6px 12px;
-    background: linear-gradient(180deg, rgba(130, 120, 255, 0.86), rgba(66, 81, 190, 0.94));
-    box-shadow: 0 0 16px rgba(130, 120, 255, 0.18);
+    padding: 8px 12px;
 }
 
 .dash-water-card,
