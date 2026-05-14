@@ -122,18 +122,19 @@
             </div>
 
             <div class="card air-card dash-card dash-air-card">
-                <div style="display:flex; justify-content:space-between;">
-                    <h3 style="margin:0; color:var(--air-color);">🌬️ Воздух / Улица</h3><span id="airGoalDisplay"
+                <div class="air-card-header">
+                    <h3 style="margin:0; color:var(--air-color);"><span class="air-title-icon"
+                            aria-hidden="true"></span>Воздух / Улица</h3><span id="airGoalDisplay"
                         style="color:#888; font-size:0.9em;">Цель: 60 мин</span>
                 </div>
                 <div class="air-progress-bg">
+                    <div class="air-scene-layer" aria-hidden="true"></div>
                     <div class="air-progress-fill" id="airBar"></div>
                     <div class="air-text"><span id="airCurrent">0</span></div>
                 </div>
-                <div class="air-controls"><button class="air-btn" onclick="addAir(15)">+15</button><button
-                        class="air-btn" onclick="addAir(30)">+30</button><button class="air-btn" onclick="addAir(60)">+1
-                        час</button></div>
-                <div class="air-controls" style="margin-top:5px;"><button class="air-btn-neg"
+                <div class="air-controls air-controls-positive"><button class="air-btn" onclick="addAir(15)">+15</button><button
+                        class="air-btn" onclick="addAir(30)">+30</button></div>
+                <div class="air-controls air-controls-negative" style="margin-top:5px;"><button class="air-btn-neg"
                         onclick="addAir(-15)">-15</button><button class="air-btn-neg" onclick="addAir(-30)">-30</button>
                 </div>
             </div>

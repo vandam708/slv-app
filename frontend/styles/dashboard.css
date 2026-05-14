@@ -654,18 +654,245 @@ body {
     text-shadow: 0 1px 3px #190009, 0 0 12px rgba(255, 83, 130, 0.38);
 }
 
+.dash-air-card {
+    min-height: 330px;
+    padding: 0;
+    border: 0;
+    border-left: 0;
+    overflow: hidden;
+    background:
+        url("../assets/ui/air-street/air-panel-bg.png") center / 100% 100% no-repeat,
+        linear-gradient(180deg, rgba(9, 20, 30, 0.72), rgba(6, 12, 18, 0.92));
+    box-shadow: none;
+}
+
+.dash-air-card::before {
+    display: none;
+}
+
 .dash-air-card::after {
     content: "";
     position: absolute;
-    left: 22px;
-    right: 22px;
-    bottom: 58px;
-    height: 58px;
-    opacity: 0.38;
+    left: 18.2%;
+    right: 30.5%;
+    top: 30.5%;
+    bottom: 17.5%;
+    z-index: 4;
+    pointer-events: none;
+    border-radius: 18px;
     background:
-        linear-gradient(to top, rgba(76, 201, 240, 0.28), transparent 70%),
-        repeating-linear-gradient(90deg, transparent 0 18px, rgba(168, 229, 255, 0.34) 18px 22px, transparent 22px 34px);
-    clip-path: polygon(0 70%, 6% 56%, 10% 65%, 15% 42%, 20% 66%, 27% 36%, 32% 62%, 38% 45%, 45% 70%, 52% 34%, 60% 64%, 68% 48%, 75% 66%, 82% 42%, 89% 68%, 100% 50%, 100% 100%, 0 100%);
+        linear-gradient(118deg, transparent 0 18%, rgba(255, 255, 255, 0.28) 19%, transparent 32%),
+        linear-gradient(104deg, transparent 0 61%, rgba(255, 255, 255, 0.2) 62%, transparent 73%),
+        radial-gradient(circle at 83% 16%, rgba(255, 255, 185, 0.2), transparent 18%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 40%, rgba(36, 219, 255, 0.12));
+    mix-blend-mode: screen;
+    opacity: 0.75;
+}
+
+.dash-air-card > * {
+    z-index: 5;
+}
+
+.dash-air-card .air-card-header {
+    position: absolute;
+    left: 6.5%;
+    right: 6.5%;
+    top: 8.2%;
+    z-index: 7;
+    display: block;
+    pointer-events: none;
+}
+
+.dash-air-card .air-card-header h3 {
+    position: absolute;
+    left: 38%;
+    top: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    width: max-content;
+    transform: translateX(-50%);
+    color: #c9efff !important;
+    font-size: clamp(0.78rem, 1.05vw, 1.05rem);
+    line-height: 1;
+    letter-spacing: 0;
+    text-shadow: 0 2px 2px rgba(0, 0, 0, 0.62), 0 0 10px rgba(117, 231, 255, 0.32);
+}
+
+.air-title-icon {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+}
+
+.air-title-icon::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 9px;
+    height: 9px;
+    border: 3px solid #c9f5ff;
+    border-left-color: transparent;
+    border-bottom-color: transparent;
+    background: transparent;
+    border-radius: 999px;
+    box-shadow: 0 0 10px rgba(125, 236, 255, 0.45);
+    transform: rotate(45deg);
+}
+
+.dash-air-card #airGoalDisplay {
+    position: absolute;
+    right: 0;
+    top: 1px;
+    color: #d7f3ff !important;
+    font-size: clamp(0.68rem, 0.9vw, 0.92rem) !important;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-shadow: 0 2px 2px rgba(0, 0, 0, 0.62), 0 0 10px rgba(117, 231, 255, 0.28);
+}
+
+.dash-air-card .air-progress-bg {
+    position: absolute;
+    left: 18.2% !important;
+    right: auto !important;
+    width: 62% !important;
+    top: 30.5%;
+    bottom: 17.5%;
+    height: auto;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(0 0 0 0 round 18px);
+    border: 0;
+    border-radius: 18px;
+    background: transparent !important;
+    box-shadow: none;
+}
+
+.dash-air-card .air-scene-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    z-index: 0;
+    border-radius: inherit;
+    background: url("../assets/ui/air-street/air-scene-full.png") center / 100% 100% no-repeat;
+    clip-path: inset(0 0 0 0 round 16px);
+    pointer-events: none;
+}
+
+.dash-air-card .air-progress-bg::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    background:
+        linear-gradient(90deg, transparent 0 55%, rgba(255, 255, 255, 0.12) 62%, transparent 78%),
+        radial-gradient(circle at 82% 18%, rgba(255, 244, 154, 0.28), transparent 17%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 45%);
+    pointer-events: none;
+}
+
+.dash-air-card .air-progress-fill {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 23%;
+    max-width: 100%;
+    z-index: 1;
+    border-radius: 0;
+    background:
+        linear-gradient(180deg, rgba(124, 250, 255, 0.55), rgba(38, 184, 222, 0.52)),
+        repeating-linear-gradient(100deg, transparent 0 32px, rgba(255, 255, 255, 0.25) 32px 36px, transparent 36px 66px);
+    box-shadow: 0 -8px 18px rgba(108, 235, 255, 0.18);
+    transition: width 0.3s ease;
+}
+
+.dash-air-card .air-text {
+    position: absolute;
+    inset: auto auto 1.4% 50%;
+    width: 34%;
+    min-width: 128px;
+    height: 18%;
+    z-index: 7;
+    transform: translateX(-50%);
+    background: url("../assets/ui/air-street/air-bottom-badge.png") center / 100% 100% no-repeat;
+    color: #d8f4ff;
+    font-size: clamp(0.78rem, 1.1vw, 1.15rem);
+    text-shadow: 0 2px 2px rgba(0, 0, 0, 0.76), 0 0 10px rgba(95, 225, 255, 0.32);
+}
+
+.dash-air-card .air-text span {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.dash-air-card .air-controls {
+    display: contents;
+}
+
+.dash-air-card .air-btn,
+.dash-air-card .air-btn-neg {
+    position: absolute;
+    z-index: 8;
+    width: 7.2%;
+    min-width: 38px;
+    max-width: 64px;
+    aspect-ratio: 1;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: transparent;
+    font-size: 0;
+    text-shadow: none;
+    box-shadow: none;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+.dash-air-card .air-btn {
+    background-image: url("../assets/ui/air-street/air-side-button-plus.png");
+}
+
+.dash-air-card .air-btn-neg {
+    background-image: url("../assets/ui/air-street/air-side-button-minus.png");
+}
+
+.dash-air-card .air-controls-positive .air-btn:nth-child(1) {
+    left: 5.6%;
+    top: 25.5%;
+}
+
+.dash-air-card .air-controls-positive .air-btn:nth-child(2) {
+    right: 4.8%;
+    top: 25.0%;
+}
+
+.dash-air-card .air-controls-positive .air-btn:nth-child(3) {
+    display: none;
+}
+
+.dash-air-card .air-controls-negative .air-btn-neg:nth-child(1) {
+    left: 5.6%;
+    bottom: 22.4%;
+}
+
+.dash-air-card .air-controls-negative .air-btn-neg:nth-child(2) {
+    right: 4.8%;
+    bottom: 24.8%;
+}
+
+.dash-air-card::selection {
+    background: rgba(108, 235, 255, 0.3);
 }
 
 .accordion-header {
