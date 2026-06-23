@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --accent: #4cc9f0;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #1b212c;
+  color: #e8eef7;
+  font-family: 'Manrope', system-ui, sans-serif;
+  background-image:
+    radial-gradient(1200px 800px at 12% -10%, rgba(76, 201, 240, 0.06), transparent 60%),
+    radial-gradient(1000px 700px at 110% 10%, rgba(157, 123, 232, 0.05), transparent 55%);
+  background-attachment: fixed;
+  overscroll-behavior-y: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a3340;
+  border-radius: 99px;
+  border: 2px solid #1b212c;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .neo-card {
+    @apply rounded-neo bg-surface shadow-neo;
+  }
+  .neo-pressable {
+    @apply transition-all duration-150 active:shadow-neo-inset active:scale-[0.98];
+  }
+  .neo-text-glow {
+    text-shadow: 0 0 18px rgba(76, 201, 240, 0.55);
+  }
+  .neo-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px;
+    border-radius: 99px;
+    background: #161b24;
+    box-shadow: inset 3px 3px 6px #11151c, inset -3px -3px 6px #252f3e;
+    outline: none;
+  }
+  .neo-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #232c39, #161b24);
+    box-shadow: 3px 3px 6px #11151c, -3px -3px 6px #252f3e, 0 0 10px -1px var(--range-glow, rgba(76, 201, 240, 0.7));
+    cursor: pointer;
+    border: 2px solid var(--range-glow, #4cc9f0);
+  }
+  .neo-range::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #232c39, #161b24);
+    border: 2px solid var(--range-glow, #4cc9f0);
+    cursor: pointer;
+  }
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* --- Living visuals: water, air, sleep --- */
+@keyframes slv-wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes slv-bubble {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translateY(-160px) scale(0.4); opacity: 0; }
+}
+@keyframes slv-drift {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: var(--mote-opacity, 0.6); }
+  90% { opacity: var(--mote-opacity, 0.6); }
+  100% { transform: translate(var(--mote-x, 60px), var(--mote-y, -40px)); opacity: 0; }
+}
+@keyframes slv-streak {
+  from { transform: translateX(-140%); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.6; }
+  to { transform: translateX(260%); opacity: 0; }
+}
+@keyframes slv-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes slv-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+@keyframes slv-spin-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

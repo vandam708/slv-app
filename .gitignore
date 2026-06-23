@@ -1,0 +1,28 @@
+# Dependencies / build output
+node_modules/
+dist/
+dist-ssr/
+build/
+
+# Logs
+logs/
+*.log
+server.err.log
+server.out.log
+
+# Local browser profile used for testing (transient junk)
+edge-profile-air/
+
+# Env / secrets
+.env
+.env.*
+*.local
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.sw?
