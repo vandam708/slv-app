@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { NeoCard } from '../../components/ui/NeoCard';
 import { SectionTitle } from '../../components/ui/bits';
 import { useConfig, useData } from '../../store/selectors';
@@ -51,19 +52,16 @@ function ExerciseRow({ ex, total }: { ex: SportExercise; total: number }) {
         }}
         className="w-16 rounded-xl bg-sunken py-1.5 text-center text-sm font-bold text-ink shadow-neo-inset-sm outline-none"
       />
-      <button
+      <motion.button
+        whileTap={{ scale: 0.88 }}
         title="Записать в статистику"
         aria-label="Записать"
         onClick={(e) => commit(e.clientX, e.clientY)}
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-lg font-bold transition-shadow active:shadow-neo-inset-sm"
-        style={{
-          background: SPORT,
-          color: '#0e141c',
-          boxShadow: `2px 2px 6px #11151c, -2px -2px 6px #252f3e, 0 0 14px -3px ${SPORT}`,
-        }}
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface text-lg font-bold shadow-neo-sm active:shadow-neo-inset-sm"
+        style={{ color: SPORT }}
       >
         ✓
-      </button>
+      </motion.button>
     </div>
   );
 }
